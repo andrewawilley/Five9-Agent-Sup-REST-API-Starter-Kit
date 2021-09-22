@@ -46,6 +46,12 @@
                             <li class="nam-item">
                                 <a class="nav-link f9-getCurrentCalls" href="#">Get Current Calls</a>
                             </li>
+                            <li class="nam-item">
+                                <a class="nav-link f9-getDomainCallVariables" href="#">Get Domain Call Variables</a>
+                            </li>
+                            <li class="nam-item">
+                                <a class="nav-link f9-getDomainSpeedDials" href="#">Get Domain Speed Dials</a>
+                            </li>
                         </ul>
                         <small>use CTRL-SHIFT-J to open the java console to view logging events and other data</small>
                     </div>
@@ -431,21 +437,32 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
 
             
             /**
-            * getCallVariables returns the call attached variables for a given callID
+            * getDomainCallVariables returns the call attached variables for a given callID
             * 
             * Five9 VCC Agent API Method:
             *   GET /orgs/{orgId}/call_variables
             */
-            function getCallVariables(){
+            function getDomainCallVariables(){
                 let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
                 console.log(endpointURL);
-                let cavs = undefined;
+                let cavsList = undefined;
+                let cavs = {};
 
                 $.get( endpointURL, function(res){
                     console.log("Domain CAVs:");
                     console.log(res);
-                    cavs = res;
+                    cavsList = res;
                 });
+
+                cavsList.forEach((cav) => {
+                    cavs[cav.group] = cavs[cav.group] || {};
+                    cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
+                    cavs[cav.group][cav.name]["id"] = cav.id;
+                    cavs[cav.group][cav.name]["type"] = cav.type;
+                    cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
+                });
+                console.log("Domain CAVs after transformation:");
+                console.log(cavs);
                 return cavs;
             }
 
@@ -456,7 +473,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             * Five9 VCC Agent API Method:
             *   GET /orgs/{orgId}/call_variables
             */
-            function getCallVariables(){
+            function setDomainCallVariable(){
                 let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
                 console.log(endpointURL);
                 let cavs = undefined;
@@ -467,32 +484,6 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                     cavs = res;
                 });
                 return cavs;
-            }
-
-            
-            /**
-            * getCurrentCallInfo returns the call attached variables for a given callID
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /agents/{agentId}/interactions/calls/{callId}
-            */
-            function getCurrentCallInfo(callId=undefined){
-                if(callId === undefined){
-                    let activeCalls = getCurrentCalls();
-                    let activeCall = activeCalls[0];
-                    callId = activeCall.id
-                }
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId;
-                console.log(endpointURL);
-                let cavValues = undefined;
-
-                $.get( endpointURL, function(res){
-                    console.log("Returned calls:");
-                    console.log(res);
-                    cavValues = res;
-                });
-                return cavValues;
             }
 
             
@@ -806,6 +797,34 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });	
             }
 
+
+            /**
+            * Returns speed dials
+            * 
+            * Five9 VCC Agent API Method:
+            *   GET /orgs/{orgId}/speed_dials
+            * 
+            * Five9 Response Sample:
+            *   
+            */
+            function getDomainSpeedDials(){
+
+                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/speed_dials";
+                console.log(endpointURL);
+                let speedDials = undefined;
+                $.ajax({
+                    url: endpointURL,
+                    type: 'GET',
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("SpeedDials")
+                        console.log(res);
+                        speedDials = res;
+                    }
+                });	
+                return speedDials;
+            }
+
             /**
             * play_prompt plays an audio prompt on the agent interaction
             * 
@@ -1011,7 +1030,6 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });
                 
                 $(".f9-get-prompts").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     getPrompts();
                     //playPrompt();
                 });
@@ -1023,38 +1041,37 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });
 
                 $(".f9-sup-callrecordingview").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     callRecordingView();
                 });
 
                 
 
                 $(".f9-securePayLite").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     addCampaignToConference();
                 });
 
-
-
                 $(".f9-updatecontact").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     updateContactInfo();
                 });
 
                 $(".f9-getDomainContactFields").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     getContactFields();
                 });
 
                 $(".f9-disposeCurrentCall").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
                     disposeCurrentCall(callId=null, dispositionId=DEFAULT_DISPOSITION_ID);
                 });
 
                 $(".f9-getCurrentCalls").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
-                    getCurrentCallInfo();
-                    //assignContactToCall(731);
+                    getCurrentCalls();
+                });
+
+                $(".f9-getDomainCallVariables").click(function(){
+                    getDomainCallVariables();
+                });
+
+                $(".f9-getDomainSpeedDials").click(function(){
+                    getDomainSpeedDials();
                 });
             });
         </script>
