@@ -52,6 +52,9 @@
                             <li class="nam-item">
                                 <a class="nav-link f9-getDomainSpeedDials" href="#">Get Domain Speed Dials</a>
                             </li>
+                            <li class="nam-item">
+                                <a class="nav-link f9-getEwtForSkill" href="#">Get EWT for skill</a>
+                            </li>
                         </ul>
                         <small>use CTRL-SHIFT-J to open the java console to view logging events and other data</small>
                     </div>
@@ -825,6 +828,34 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 return speedDials;
             }
 
+
+            /**
+            * get EWT for a specific skill
+            * 
+            * Five9 VCC Agent API Method:
+            *   GET /orgs/{orgId}/speed_dials
+            * 
+            * Five9 Response Sample:
+            *   
+            */
+            function getEwtForSkill(skillGroupId, mediaTypeId="3000"){
+
+                let endpointURL = base_supervisor_api_url+"/orgs/"+f9OrgId+"/ewt/group/"+skillGroupId+"/"+mediaTypeId;
+                console.log(endpointURL);
+                let ewtResponse = undefined;
+                $.ajax({
+                    url: endpointURL,
+                    type: 'GET',
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("SpeedDials")
+                        console.log(res);
+                        ewtResponse = res;
+                    }
+                });	
+                return ewtResponse;
+            }
+
             /**
             * play_prompt plays an audio prompt on the agent interaction
             * 
@@ -1037,7 +1068,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 $(".f9-play-prompt").click(function(){
                     //let dnis = prompt("Enter DNIS to dial");
                     //getPrompts();
-                    playPrompt("-20");
+                    playPrompt("222985");
                 });
 
                 $(".f9-sup-callrecordingview").click(function(){
@@ -1069,9 +1100,13 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 $(".f9-getDomainCallVariables").click(function(){
                     getDomainCallVariables();
                 });
-
+                
                 $(".f9-getDomainSpeedDials").click(function(){
                     getDomainSpeedDials();
+                });
+
+                $(".f9-getEwtForSkill").click(function(){
+                    getEwtForSkill();
                 });
             });
         </script>
