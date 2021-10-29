@@ -530,9 +530,12 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 console.log(activeCall);
 
                 // Process Field Updates
-                let contact = getContactById(activeCall.activeContact.id);
+                // let contact = getContactById(activeCall.activeContact.id);
                 console.log("CONTACT LOOKED UP IS: " + contact);
-                activeCall.activeContact.fields["1044"] = "AWTEST87";
+                for(var i=0; i < fieldUpdates.length; i++){
+                    activeCall.activeContact.fields[fieldUpdates[i]] = "AWTEST87";
+
+                }
 
                 let contactInfo = JSON.stringify(activeCall.activeContact);
                 console.log(contactInfo);
