@@ -298,6 +298,9 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             let DEFAULT_CAMPAIGN_NAME = "ob_outreach";
             let DEFAULT_DISPOSITION_ID = "1130796";
 
+            let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
+            let DOMAIN_CAVs = {};
+
             /**
             * getCampaignInfo returns a CampaignInfo object, requires a campaignId.
             * 
@@ -466,6 +469,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });
                 console.log("Domain CAVs after transformation:");
                 console.log(cavs);
+                DOMAIN_CAVs = cavs;
                 return cavs;
             }
 
@@ -504,11 +508,15 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/contact_fields";
                 console.log(endpointURL);
 
+                let contactFields = {};
+
                 $.get( endpointURL, function(res){
                     console.log("Returned domain contact fields:");
                     console.log(res);
                     domainContactFields = res;
                 });
+
+
                 return domainContactFields;
             }
 
@@ -523,6 +531,61 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             *   
             */
             function updateContactInfo(fieldUpdates=[{"1010": "TestFirstName"}]){
+                let contactFields = getContactFields();
+                console.log(contactFields);
+
+
+                let activeCalls = getCurrentCalls();
+                let activeCall = activeCalls[0];
+
+                let callId = activeCall.id;                
+                console.log(activeCall);
+
+                // Process Field Updates
+                // let contact = getContactById(activeCall.activeContact.id);
+                console.log("CONTACT LOOKED UP IS: " + contact);
+                for(var i=0; i < fieldUpdates.length; i++){
+                    activeCall.activeContact.fields[fieldUpdates[i]] = "AWTEST87";
+
+                }
+
+                let contactInfo = JSON.stringify(activeCall.activeContact);
+                console.log(contactInfo);
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/update_contact";
+
+                $.ajax({
+                    url: endpointURL,
+                    type: 'PUT',
+                    data: contactInfo,
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("ActiveContact Response")
+                        console.log(res);
+                    }
+                });	
+            }
+
+
+            /**
+            * Updates contact info.  Accepts an array of fieldId and Values to update on the record.\
+            * 
+            *  ******* NOT FULLY IMPLEMENTED ***************
+            * 
+            * Five9 VCC Agent API Method:
+            *   PUT /agents/{agentId}/interactions/calls/{callId}/update_contact
+            * 
+            * Five9 Response Sample:
+            *   
+            */
+            function updateContactInfoByFieldName(fieldUpdates=[{"last_name": "Livingston the 3rd"}]){
+                let domainContactFields = getContactFields();
+                console.log(domainContactFields);
+                let contactFields = {};
+
+                for(var i=0; i < domainContactFields.length; i++) {
+                    
+                }
+
                 let activeCalls = getCurrentCalls();
                 let activeCall = activeCalls[0];
 
@@ -1029,9 +1092,6 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });
 
                 window.parent.$(".tab-dropdown-label:contains('Interaction')").click();
-
-
-
             })(jQuery)
         </script>
 
@@ -1085,7 +1145,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });
 
                 $(".f9-updatecontact").click(function(){
-                    updateContactInfo();
+                    updateContactInfoByFieldName();
                 });
 
                 $(".f9-getDomainContactFields").click(function(){
@@ -1111,6 +1171,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 $(".f9-getEwtForSkill").click(function(){
                     getEwtForSkill();
                 });
+
             });
         </script>
     </body>
