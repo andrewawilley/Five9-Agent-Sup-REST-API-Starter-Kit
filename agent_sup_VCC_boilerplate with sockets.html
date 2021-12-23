@@ -11,257 +11,11 @@
     <body>
         <main class="container">
             <div class="row">
-                <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                    <div class="position-sticky sticky-top pt-3">
-                        <p>Sample Wrapped Methods</p>
-                        <p id="login-required-message"><small class="text-muted">Log into Five9 in <a href="https://login.five9.com" target="_blank">another tab</a> for working examples</small></p>                  
-                        <ul class="nav flex-column example-links">
-                            <li class="nav-item">
-                                <a class="nav-link f9-call-external-number" href="#">Call External Number</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link f9-recording-pause" href="#">Stop Recording on Current Call</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link f9-recording-resume" href="#">Start Recording on Current Call</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link f9-conference-transfer" href="#">Initiate Conference Transfer</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-get-prompts" href="#">Get list of available prompts</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-play-prompt" href="#">Play a prompt</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-disposeCurrentCall" href="#">End current call with a set dispositionId</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-getDomainContactFields" href="#">Obtain Domain Contact Fields</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-updatecontact" href="#">Update Contact Record</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-getCurrentCalls" href="#">Get Current Calls</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-getDomainCallVariables" href="#">Get Domain Call Variables</a>
-                            </li>
-                            <li class="nam-item">
-                                <a class="nav-link f9-getDomainSpeedDials" href="#">Get Domain Speed Dials</a>
-                            </li>
-                        </ul>
-                        <small>use CTRL-SHIFT-J to open the java console to view logging events and other data</small>
-                    </div>
-                </nav>
+                <div class="col-md-3 col-lg-2">                        <ul class="nav flex-column example-links">
+                </div>
                 <div class="col-md-9 col-lg-10">
-                    <h1>VCC Agent/Supervisor REST API Boilerplate with Examples</h1>
-
-                    <p>
-                        As described in the <a href="https://webapps.five9.com/assets/files/for_customers/documentation/apis/vcc-agent+supervisor-rest-api-reference-guide.pdf">documentation</a>, using the VCC REST API endpoints follows this pattern
-                        <ul>
-                            <li>Obtain session metadata from https://app.five9.com/appsvcs/rs/svc/auth/metadata</li>
-                            <li>Build the base api url (API domain:port)</li>
-                            <li>Determine the appropriate context path for the endpoint</li>                        
-                            <li>Invoke the method with the fully formed path</li>
-                        </ul>
-                    </p>
-                    <h4>Obtaining the metadata</h4>
-                    <p> 
-                        If you are logged into the Agent or Supervisor applications in the same browser as the page you are using the APIs from, then your request for the metadata will use the existing session from the Agent or Supervisor application and you can obtain the metadata without needing to provide user credentials explicitly.
-                    </p>
-                    <h4>Building the Endpoint URL</h4>
-                    <p>
-                        The session metadata will contain the logged-in user's userId, orgId, and the host information. 
-                        <a href="#" id="toggle-metadata" class="text-decoration-none">Toggle Metadata Sample</a></toggle>
-                            <pre class="metadata">
-*** SAMPLE - Log into the Agent or Supervisor apps in another tab and refresh for this to show your metadata ***
-{
-    "tokenId": "e34ff153-72cb-11eb-aab9-0050asdfd2232",
-    "sessionId": "fb81eddd76ec0f096a0d1be188ae240e1f94469ee956d13da5356b8eaasdfasdf",
-    "orgId": "112342346331",
-    "userId": "323400000552352",
-    "context": {
-        "cloudClientUrl": null,
-        "pwdExpiryDays": "78",
-        "cloudTokenUrl": null,
-        "farmId": "3000000000000055511"
-    },
-    "metadata": {
-        "freedomUrl": "https://app.five9.com",
-        "dataCenters": [
-            {
-                "name": "Atlanta Data Center",
-                "uiUrls": [
-                    {
-                        "host": "app-atl.five9.com",
-                        "port": "443",
-                        "routeKey": "ATLUIjdhnJ",
-                        "version": "12.0.93"
-                    }
-                ],
-                "apiUrls": [
-                    {
-                        "host": "app-atl.five9.com",
-                        "port": "443",
-                        "routeKey": "ATLAPILxUX",
-                        "version": "12.0.93"
-                    }
-                ],
-                "loginUrls": [
-                    {
-                        "host": "app-atl.five9.com",
-                        "port": "443",
-                        "routeKey": "ATLLGNPOE9",
-                        "version": "12.0.41"
-                    }
-                ],
-                "active": true
-            }
-        ]
-    }
-}                                
-                            </pre>
-
-                        A fully-formed URL will look like this:
-                        <pre>
-https://<span class="bg-primary text-light">{   api host:port   }</span><span class="bg-info">/{  ctxt path }/</span><span class="bg-success text-light">{ ctxt identifier }/</span><span class="bg-secondary text-light">{ api method with path elements }</span>
-https://<span class="bg-primary text-light">app-scl.five9.com:443</span><span class="bg-info">/appsvcs/rs/svc/</span><span class="bg-success text-light">agents/357892724324/</span><span class="bg-secondary text-light">interactions/calls/D919FFB8258B45D7BFED2786BF45C42F/pause_recording</span>
-                        </pre>
-                    </p>
-
-                     <h3>The Bootstrap</h3>
-                    <p>Here is an example of how to obtain the metadata in a reusable manner.  Note the placeholder for wrapped methods you may add in later.</p>
-                    <pre>
-let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
-let five9SessionData;
-
-
-/** 
-* API Context Paths:
-*      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
-*      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
-*      Supervisor REST API Services "sup_rest": "/supsvcs/rs/svc"
-*/
-let contextPaths = {
-    "agent_rest": "/appsvcs/rs/svc",
-    "agent_str": "/strsvcs/rs/svc",
-    "sup_rest": "/supsvcs/rs/svc"
-}
-
-let base_api_url;
-let base_agents_api_url;
-let base_supervisor_api_url;
-
-let f9OrgId;
-let f9UserId;
-                        
-/**************************************
-    *                                    *
-    * API Endpoint Wrappers will go here *
-    *                                    *
-    **************************************/        
-
-// Obtain the metadata
-(function($){
-    $.ajaxSetup({
-        crossDomain: true,
-        async: false,
-        xhrFields: {
-            withCredentials: true
-        }
-    });
-
-
-    $.get(freedomMetadataURL, function( data ) {
-        five9SessionData = data;
-        f9OrgId = five9SessionData.orgId;
-        f9UserId = five9SessionData.userId;
-
-        base_api_url = "https://" + five9SessionData.metadata.dataCenters[0].apiUrls[0].host + ":" + five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
-        base_agents_api_url = base_api_url + contextPaths.agent_rest;
-        base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
-
-        console.log(("user ID: " + five9SessionData.userId));
-        console.log("Base Supervisor API URL: " + base_supervisor_api_url);
-        console.log("Base Agent API URL: " + base_agents_api_url);
-    });    
-})(jQuery)
-                    </pre>
-
-                    <h3>Wrapping Endpoints</h3>
-                    <p>Refer to the <a href="https://webapps.five9.com/assets/files/for_customers/documentation/apis/vcc-agent+supervisor-rest-api-reference-guide.pdf">VCC Agent+Supervisor Rest API Reference Guide</a> and follow these patterns</p>
-                    <p>Each endpoint will require either the <strong>base_agents_api_url</strong> or the <strong>base_supervisor_api_url</strong> to use the correct context path.  Most agent endpoints will need <strong>"/agents/"</strong> appended, though some will use something else like <strong>"/orgs/"</strong>.  </p>
-                    <p>As a best practice, document each wrapper function with at least the path example from documentation.  Consider including some of the payload documentation or even a sample response.</p>
-                    <h4>GET Methods</h4>
-                    <p>In this example, we use a GET method for the methods that only require <strong>path</strong> parameters.</p>
-                    <pre>
-/**
-* getCurrentCalls returns an array of calls [&lt;object CallInfo&gt;, ] with which the agent can work
-* 
-* Five9 VCC Agent API Method:
-*   GET /agents/{agentId}/interactions/calls
-* 
-* Five9 Response Sample:
-*   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]
-*/
-function getCurrentCalls(){
-    let calls;
-
-    let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls";
-    console.log(endpointURL);
-
-    $.get( endpointURL, function(res){
-        console.log("Returned calls:");
-        console.log(res);
-        calls = res;
-    });
-    return calls;
-}                                
-                    
-                    </pre>
-
-                    <h4>POST Methods</h4>                    
-                    <p>In this example using the <strong>add_external_to_conference</strong> agent endpoint, the response from <strong>getCurrentCalls</strong> is used to obtain a required parameter for the payload.</p>
-                    <pre>
-/**
-* initiateConferenceTransfer adds a DNIS to the call.  Set warm=true for a warm conference (1st party on hold). 
-* 
-* Five9 VCC Agent API Method:
-*   POST /agents/{agentId}/interactions/calls/{callId}/add_external_to_conference
-* 
-* Five9 Response Sample:
-*   
-*/
-function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCallerInfo=true){
-    let activeCalls = getCurrentCalls();
-    let callId = activeCalls[0].id;
-    
-    let destinationInfo = JSON.stringify({
-        "number": dnis, 
-        "warm": warm, 
-        "checkDNC": checkDNC, 
-        "includeCallerInfo": includeCallerInfo
-    });
-
-    let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/add_external_to_conference";
-    console.log(endpointURL);
-
-    $.ajax({
-        url: endpointURL,
-        type: 'POST',
-        data: destinationInfo,
-        contentType: "application/json",
-        success: function(res) {
-            console.log("Conference Response ")
-            console.log(res);
-        }
-    });	
-}
-                    </pre>
-
+                    <h1>Greeting</h1>
+                    <p>do your thing</p>
                 </div>
             </div>
         </main>
@@ -279,19 +33,25 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             *      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
             *      Supervisor REST API Services "sup_rest": "/supsvcs/rs/svc"
             */
+
+            let randomSocketKey = (Math.random() * 1000) + 1
+
             let contextPaths = {
                 "agent_rest": "/appsvcs/rs/svc",
                 "agent_str": "/strsvcs/rs/svc",
-                "sup_rest": "/supsvcs/rs/svc"
+                "sup_rest": "/supsvcs/rs/svc",
+                "websocket": "/appsvcs/ws/" + randomSocketKey
             }
 
             let base_api_url;
             let base_agents_api_url;
             let base_supervisor_api_url;
+            let base_websocket_api_url;
 
             let f9OrgId;
             let f9UserId;
 
+            let f9CurrentCallId;
             let DEFAULT_CAMPAIGN_NAME = "ob_outreach";
             let DEFAULT_DISPOSITION_ID = "1130796";
 
@@ -425,17 +185,17 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]
             */
             function getCurrentCalls(){
-                // let calls;
+                let calls;
 
                 let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls";
                 console.log(endpointURL);
 
-                $.get( endpointURL, function(res){
+                return $.get( endpointURL, function(res){
                     console.log("Returned calls:");
                     console.log(res);
                     calls = res;
                 });
-                return calls;
+
             }
 
             
@@ -630,7 +390,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                     let activeCalls = getCurrentCalls();
                     callId = activeCalls[0].id;    
                 }
-                
+
                 let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/pause_recording";
                 console.log(endpointURL);
 
@@ -643,6 +403,38 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                         }
                 });
             }
+
+
+            /**
+            * stopCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
+            * user's active call is obtained from getCurrentCalls() 
+            * 
+            * Five9 VCC Agent API Method:
+            *   PUT /agents/{agentId}/interactions/calls/{callId}/pause_recording
+            * 
+            * Five9 Response Sample <object callInfo>:
+            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+            *   
+            */
+            function stopCurrentCallRecording(callId=null){
+                if(callId === null){
+                    let activeCalls = getCurrentCalls();
+                    callId = activeCalls[0].id;
+                }
+
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/stop_recording";
+                console.log(endpointURL);
+
+                $.ajax({
+                    url: endpointURL,
+                    type: 'PUT',
+                    success: function(success_response) {
+                        console.log("Recording Stop Response:")
+                        console.log(success_response);
+                        }
+                });
+            }
+
 
 
             /**
@@ -695,6 +487,8 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                         console.log(success_response);
                         }
                 });
+
+
             }
 
 
@@ -710,17 +504,17 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             *   
             */
             function resumeCurrentCallRecording(callId=null){
-                if(callId === null){
-                    let activeCalls = getCurrentCalls();
-                    callId = activeCalls[0].id;    
-                }
-                
+
                 let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/resume_recording";
                 console.log(endpointURL);
 
                 $.ajax({
                     url: endpointURL,
                     type: 'PUT',
+                    done: function(success_response) {
+                        console.log("Recording Resumed Response:")
+                        console.log(success_response);
+                        },
                     success: function(success_response) {
                         console.log("Recording Resumed Response:")
                         console.log(success_response);
@@ -737,9 +531,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             * Five9 Response Sample:
             *   
             */
-            function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCallerInfo=true){
-                let activeCalls = getCurrentCalls();
-                let callId = activeCalls[0].id;
+            function initiateConferenceTransfer(callId, dnis, warm=false, checkDNC=true, includeCallerInfo=true){
                 
                 let destinationInfo = JSON.stringify({
                     "number": dnis, 
@@ -878,7 +670,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/speed_dials";
                 console.log(endpointURL);
                 let speedDials = undefined;
-                $.ajax({
+                return $.ajax({
                     url: endpointURL,
                     type: 'GET',
                     contentType: "application/json",
@@ -888,7 +680,7 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                         speedDials = res;
                     }
                 });	
-                return speedDials;
+                // return speedDials;
             }
 
 
@@ -1050,113 +842,84 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
                 });	
             }
 
-            // Other recommendations for methods to wrap
-            // Agent stats
-            // Last known station ID
-            // Chats closed, emails created
-            // GET /supervisors/{supervisorId}/skills/{skillId}/snapshot
-            
-            $( document ).ready(function() {
-                // Set async to FALSE for examples only.  In a normal use-case using deferred When->Then is preferred.
-                $.ajaxSetup({
-                    crossDomain: true,
-                    async: false,
-                    xhrFields: {
-                        withCredentials: true
-                    }
-                });
-                    
-                $.get(freedomMetadataURL, function( data ) {
+
+            function getSessionMetadata(){
+                return $.get(freedomMetadataURL, function( data ) {
                     five9SessionData = data;
                     f9OrgId = five9SessionData.orgId;
                     f9UserId = five9SessionData.userId;
 
                     base_api_url = "https://" + five9SessionData.metadata.dataCenters[0].apiUrls[0].host + ":" + five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
+                    base_ws_url = "wss://" + five9SessionData.metadata.dataCenters[0].apiUrls[0].host + ":" + five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
+                    
                     base_agents_api_url = base_api_url + contextPaths.agent_rest;
                     base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
+                    base_websocket_api_url = base_ws_url + contextPaths.websocket;
 
                     console.log(("user ID: " + five9SessionData.userId));
                     console.log("Base Supervisor API URL: " + base_supervisor_api_url);
                     console.log("Base Agent API URL: " + base_agents_api_url);
-                    console.log(JSON.stringify(five9SessionData));
-                    $(".example-links").show();
-
-                    $(".metadata").html(JSON.stringify(data, undefined, 2));
-                    $("#login-required-message").hide();
-                }).fail(function (resp){
+                    console.log(data);
+                }).fail(function (data){
                     console.log("You must be logged into Five9 in another browser tab for this to work");
                     $(".example-links").hide();
                 });
+            }
 
-                // uncomment to force the parent ADP window to navigate to the Interaction tab
-                // window.parent.$(".tab-dropdown-label:contains('Interaction')").click();
-                
-                $(".metadata").toggle();
+            $( document ).ready(function() {
 
-                $("#toggle-metadata").click(function(){
-                    $(".metadata").toggle();
+                $.ajaxSetup({
+                    crossDomain: true,
+                    xhrFields: {
+                        withCredentials: true
+                    }
                 });
+    
+                $.when(getSessionMetadata()).then(function(response){
+                    console.info('Metadata has been obtained');
+                    console.log("Call ID IS @Call.call_id@ and Session ID is @Call.session_id@")
+                    let socket = new window.WebSocket(base_websocket_api_url);
+                    let pingIntervalHandle = null;
 
-                $(".f9-call-external-number").click(function(){
-                    let dnis = prompt("Enter DNIS to dial");
-                    let campaignName = prompt("Enter campaign name to call from", DEFAULT_CAMPAIGN_NAME);
-                    callExternalNumber(dnis=dnis, campaignName=campaignName);
-                });
+                    socket.onopen = function () {
+                        pingIntervalHandle = window.setInterval(function() {
+                            socket.send('ping');
+                        }, 15000);
 
-                $(".f9-recording-pause").click(function(){
-                    pauseCurrentCallRecording();
-                });
+                        console.log('websocket opened')
+                        $.when(getCurrentCalls()).then(function(res){
+                           f9CurrentCallId = res[0].id;
+                           console.log("Call ID FROM API IS " + f9CurrentCallId);
+                           stopCurrentCallRecording(f9CurrentCallId);
+                        });
+                    };
 
-                $(".f9-recording-resume").click(function(){
-                    resumeCurrentCallRecording();
-                });
+                    socket.onmessage = function(event) {
+                        socketData = JSON.parse(event.data);
+                        console.log(socketData);
 
-                $(".f9-conference-transfer").click(function(){
-                    let dnis = prompt("Enter DNIS to dial");
-                    initiateConferenceTransfer(dnis=dnis);
-                });
-                
-                $(".f9-get-prompts").click(function(){
-                    getPrompts();
-                    //playPrompt();
-                });
-                
-                $(".f9-play-prompt").click(function(){
-                    //let dnis = prompt("Enter DNIS to dial");
-                    //getPrompts();
-                    playPrompt("222995");
-                });
+                        if(socketData.context.eventId === "3"){
+                            console.log("CALL CREATED");
+                            f9CurrentCallId = socketData.payLoad.id;
+                            console.log(f9CurrentCallId);
+                        }
 
-                $(".f9-sup-callrecordingview").click(function(){
-                    callRecordingView();
-                });
+                        if(socketData.context.eventId === "4"){
+                            let eventReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"]
+                            if((eventReasons.indexOf(socketData.context.eventReason) > -1) && socketData.payLoad.state === "TALKING"){
+                                console.log("STOPPING RECORDING ON TALKING CALL");
+                                stopCurrentCallRecording(f9CurrentCallId);
+                            }
+                        }
+                    }
 
-                $(".f9-securePayLite").click(function(){
-                    addCampaignToConference();
-                });
+                    socket.onclose = function() {
+                        window.clearInterval(pingIntervalHandle);
+                    }
 
-                $(".f9-updatecontact").click(function(){
-                    updateContactInfo();
-                });
-
-                $(".f9-getDomainContactFields").click(function(){
-                    getContactFields();
-                });
-
-                $(".f9-disposeCurrentCall").click(function(){
-                    disposeCurrentCall(callId=null, dispositionId=DEFAULT_DISPOSITION_ID);
-                });
-
-                $(".f9-getCurrentCalls").click(function(){
-                    getCurrentCalls();
-                });
-
-                $(".f9-getDomainCallVariables").click(function(){
-                    getDomainCallVariables();
-                });
-                
-                $(".f9-getDomainSpeedDials").click(function(){
-                    getDomainSpeedDials();
+                    window.addEventListener('unload', function () {
+                        socket.close();
+                    })
                 });
             });
         </script>
