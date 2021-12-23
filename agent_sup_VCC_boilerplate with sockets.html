@@ -32,8 +32,11 @@
             *      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
             *      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
             *      Supervisor REST API Services "sup_rest": "/supsvcs/rs/svc"
+            *      Websocket connection: "/appsvcs/ws/<socketkey>"
+            *           *Note:* The socketkey is optional, but only 3 sockets can exist for a user at any one time.
+            *                   Setting a random number here allows this code to be use in both an agent script AND in another browser tab
+            *                   The 4th websocket opened will cause the oldest open socket to close.
             */
-
             let randomSocketKey = (Math.random() * 1000) + 1
 
             let contextPaths = {
