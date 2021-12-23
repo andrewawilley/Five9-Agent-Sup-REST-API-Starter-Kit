@@ -859,59 +859,70 @@
                     console.log(("user ID: " + five9SessionData.userId));
                     console.log("Base Supervisor API URL: " + base_supervisor_api_url);
                     console.log("Base Agent API URL: " + base_agents_api_url);
-                    console.log(data);
+                    // console.log(data);
                 }).fail(function (data){
                     console.log("You must be logged into Five9 in another browser tab for this to work");
                     $(".example-links").hide();
                 });
             }
 
+            class f9socketEvent {
+                constructor(eventName, handler) {
+                    this.eventName = eventName
+                    this.handle = handler
+                }
+            }
+
+            let f9socketEventHandlers = {
+                "4": new f9socketEvent("EVENT_CALL_UPDATED", function(eventData){
+                    console.log(this.eventName, eventData.context.eventReason);
+                    console.log(eventData);
+                }),
+                
+                "5": new f9socketEvent("EVENT_CALL_DELETED", function(eventData){
+                    console.log(this.eventName, eventData.context.eventReason);
+                    console.log(eventData);
+                })
+            }
+
             $( document ).ready(function() {
 
+                // set crossDomain to allow page to run in separate tab and not on a campaign script
                 $.ajaxSetup({
                     crossDomain: true,
                     xhrFields: {
                         withCredentials: true
                     }
                 });
-    
-                $.when(getSessionMetadata()).then(function(response){
-                    console.info('Metadata has been obtained');
-                    console.log("Call ID IS @Call.call_id@ and Session ID is @Call.session_id@")
-                    let socket = new window.WebSocket(base_websocket_api_url);
+
+                // first obtain session metadata, and once that is complete, open a socket
+                $.when(getSessionMetadata()).then(function(sessionMetaData){
+                    console.info('Session Metadata:', sessionMetaData);
+                    const socket = new window.WebSocket(base_websocket_api_url);
                     let pingIntervalHandle = null;
 
                     socket.onopen = function () {
+                        // Socket has to be kept alive with one ping every 15 seconds
                         pingIntervalHandle = window.setInterval(function() {
                             socket.send('ping');
                         }, 15000);
-
-                        console.log('websocket opened')
-                        $.when(getCurrentCalls()).then(function(res){
-                           f9CurrentCallId = res[0].id;
-                           console.log("Call ID FROM API IS " + f9CurrentCallId);
-                           stopCurrentCallRecording(f9CurrentCallId);
-                        });
+                        console.info('Websocket Opened')
                     };
 
-                    socket.onmessage = function(event) {
-                        socketData = JSON.parse(event.data);
-                        console.log(socketData);
-
-                        if(socketData.context.eventId === "3"){
-                            console.log("CALL CREATED");
-                            f9CurrentCallId = socketData.payLoad.id;
-                            console.log(f9CurrentCallId);
+                    // attach a callback function to the "message" events on the socket
+                    socket.addEventListener('message', function(event) {
+                        eventData = JSON.parse(event.data);
+                        eventHandler = f9socketEventHandlers[eventData.context.eventId];
+                        if(eventHandler){
+                            eventHandler.handle(eventData);
+                        } else {
+                            f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent("Unhandled Socket Event", function(eventData){
+                                //console.log(this.eventName, eventData.context.eventReason)
+                            });
                         }
-
-                        if(socketData.context.eventId === "4"){
-                            let eventReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"]
-                            if((eventReasons.indexOf(socketData.context.eventReason) > -1) && socketData.payLoad.state === "TALKING"){
-                                console.log("STOPPING RECORDING ON TALKING CALL");
-                                stopCurrentCallRecording(f9CurrentCallId);
-                            }
-                        }
-                    }
+                        
+                        console.log(eventData);
+                    });
 
                     socket.onclose = function() {
                         window.clearInterval(pingIntervalHandle);
