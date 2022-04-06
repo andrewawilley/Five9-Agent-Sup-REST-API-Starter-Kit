@@ -5,7 +5,7 @@
         <meta name="description" content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API">
         <meta name="author" content="andrew.willey@five9.com">
 
-        <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
+        <title>Agent Calls in Queue Dashboard</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
     </head>
     <body>
@@ -14,8 +14,14 @@
                 <div class="col-md-3 col-lg-2">                        <ul class="nav flex-column example-links">
                 </div>
                 <div class="col-md-9 col-lg-10">
-                    <h1>Greeting</h1>
-                    <p>do your thing</p>
+                    <h1>My Skills</h1>
+                    <table id="agentSkills" class="table">
+                        <tr>
+                            <th>Skill</th>
+                            <th>Calls</th>
+                            <th>Longest In Queue</th>
+                        </tr>
+                    </table>
                 </div>
             </div>
         </main>
@@ -27,6 +33,7 @@
             let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
             let five9SessionData;
 
+            //let alertNoise = new Audio("https://www.trekcore.com/audio/computer/alert23.mp3");
             /** 
             * API Context Paths:
             *      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
@@ -100,6 +107,58 @@
                 return campaignInfo;
             }
 
+            /**
+            * getAgentQueues returns a CampaignInfo object, requires a campaignId.
+            * 
+            * Five9 VCC Agent API Method:
+            *   GET /agents/{agentId}/skills
+            * 
+            * Method return sample:
+            *   <object agentSkillInfo>  
+            */
+            function getCampaignInfo(campaignId) {
+                let campaignInfo;
+                $.get(base_agents_api_url+"/orgs/"+f9OrgId+"/campaigns/"+campaignId, function(res){
+                    // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
+                    // console.log(res);
+                    campaignInfo = res;
+                  });
+                return campaignInfo;
+            }
+
+            /**
+            * getCampaignDispositions returns a DispositionInfo object, requires a campaignId.
+            * 
+            * Five9 VCC Agent API Method:
+            *   GET /orgs/{orgId}/campaigns/{campaignId}/dispositions
+            * 
+            * Five9 Response sample:
+            *   {
+            *        "id":"101",
+            *        "name":"Open",
+            *        "displayName":"Open",
+            *        "description":null,
+            *        "flags":["SOCIAL_OPEN"],
+            *        "channelTypes":{
+            *        "CALL":{"filters":["VOICE_TRANSFER_CALL"]},
+            *        "CALL":{"filters":["VOICE_DISPOSE_CALL_OR_VOICEMAIL"]}
+            *        },
+            *        "timeout":-1,
+            *        "numberForTransfersAndConferences":null,
+            *        "type":null}
+            * 
+            * Method return sample:
+            *   <object dispositionInfo>  
+            */
+            function getAgentSkills() {
+                let agentSkillInfo;
+                return $.get(base_agents_api_url+"/agents/"+ f9UserId +"/skills", function(res){
+                    // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
+                    // console.log(res);
+                    campaignInfo = res;
+                    });
+                // return agentSkillInfo;
+            }
 
             /**
             * getAgentCampaigns returns a dictionary of campaignInfo objects the agent skills give them access to, with the campaign name as the key.
@@ -860,6 +919,7 @@
                     base_agents_api_url = base_api_url + contextPaths.agent_rest;
                     base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
                     base_websocket_api_url = base_ws_url + contextPaths.websocket;
+                    base_supervisor_websocket_api_url = base_ws_url + contextPaths.supervisor_websocket;
 
                     console.log(("user ID: " + five9SessionData.userId));
                     console.log("Base Supervisor API URL: " + base_supervisor_api_url);
@@ -884,9 +944,9 @@
                     console.log(this.eventName, eventData.context.eventReason);
                     console.log(eventData);
                     
-                    // EXAMPLE use events to stop/start recording for all calls
-                    // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
-                    // let stopRecordingStates = ["TALKING"];
+                    // 
+                    let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
+                    let stopRecordingStates = ["TALKING"];
 
                     //if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state))
                 
@@ -895,6 +955,17 @@
                 "5": new f9socketEvent("EVENT_CALL_DELETED", function(eventData){
                     console.log(this.eventName, eventData.context.eventReason);
                     console.log(eventData);
+                }),
+                
+                "29": new f9socketEvent("CALLS_IN_QUEUE", function(eventData){
+                    //console.log(this.eventName, eventData.context.eventReason);
+                    console.log("PAYLOAD:")
+                    console.log(eventData);
+                    console.log(Object.entries(eventData.payLoad))
+                    for (const [skillId, skillData] of Object.entries(eventData.payLoad)) {
+                        $(`.${skillId}-callsInQueue`).html(skillData.inQueueCallCount);
+                        $(`.${skillId}-longest`).html(skillData.longestTimeInQueueSec);
+                    }
                 })
             }
 
@@ -912,7 +983,26 @@
                 $.when(getSessionMetadata()).then(function(sessionMetaData){
                     console.info('Session Metadata:', sessionMetaData);
                     const socket = new window.WebSocket(base_websocket_api_url);
-                    let pingIntervalHandle = null;  
+                    let pingIntervalHandle = null;
+
+
+                    $.when(getAgentSkills()).then(function(agentSkills){
+                        console.log("AGENT SKILLS: ");
+                        console.log(agentSkills);
+                        agentSkills.forEach(function(skill){
+                            let row = $('<tr>').addClass(skill.id+"-results")
+                            row.append(
+                                $('<td>').addClass(skill.id+"-skillName").html(skill.name)
+                            ).append(
+                                $('<td>').addClass(skill.id+"-callsInQueue")
+                            ).append(
+                                $('<td>').addClass(skill.id+"-longest")
+                            )
+
+                            $("#agentSkills").append(row);
+                        })                        
+                    })
+    
 
                     socket.onopen = function () {
                         // Socket has to be kept alive with one ping every 15 seconds
@@ -925,6 +1015,7 @@
                     // attach a callback function to the "message" events on the socket
                     socket.addEventListener('message', function(event) {
                         eventData = JSON.parse(event.data);
+                        // console.log(eventData);
                         eventHandler = f9socketEventHandlers[eventData.context.eventId];
                         if(eventHandler){
                             eventHandler.handle(eventData);
@@ -933,13 +1024,13 @@
                                 //console.log(this.eventName, eventData.context.eventReason)
                             });
                         }
-                        // console.log(eventData);
+                        
+                        //console.log(eventData);
                     });
 
                     socket.onclose = function() {
                         window.clearInterval(pingIntervalHandle);
                     }
-
                     window.addEventListener('unload', function () {
                         socket.close();
                     })
