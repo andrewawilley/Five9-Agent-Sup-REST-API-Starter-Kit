@@ -329,44 +329,33 @@
 
 
             /**
-            * Updates contact info.  Accepts an array of fieldId and Values to update on the record.\
-            * 
-            *  ******* NOT FULLY IMPLEMENTED ***************
+            * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
+            *  
             * 
             * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/update_contact
+            *   PUT /orgs/{orgId}/contacts/{contactId}
             * 
             * Five9 Response Sample:
             *   
             */
-            function updateContactInfoByFieldName(fieldUpdates=[{"last_name": "Livingston the 3rd"}]){
-                let domainContactFields = getContactFields();
-                console.log(domainContactFields);
-                let contactFields = {};
-
-                for(var i=0; i < domainContactFields.length; i++) {
-                    
-                }
-
-                let activeCalls = getCurrentCalls();
-                let activeCall = activeCalls[0];
-
-                let callId = activeCall.id;                
-                console.log(activeCall);
+            function updateContactInfoByFieldName(contact, fieldUpdates){                
 
                 // Process Field Updates
-                // let contact = getContactById(activeCall.activeContact.id);
-                console.log("CONTACT LOOKED UP IS: " + contact);
-                for(var i=0; i < fieldUpdates.length; i++){
-                    activeCall.activeContact.fields[fieldUpdates[i]] = "AWTEST87";
 
+                for (const [key, value] of Object.entries(fieldUpdates)) {
+                    fieldId = f9domainContactFieldIdsByFieldName[key];
+                    contact.fields[fieldId] = value;
+                    console.log("Updating " + key + ": " + value + "(Field ID " + fieldId);
                 }
-
-                let contactInfo = JSON.stringify(activeCall.activeContact);
+                console.log(contact.modificationTime);
+                let contactInfo = JSON.stringify(contact);
                 console.log(contactInfo);
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/update_contact";
+                
+                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/contacts/"+contact.id;
+                console.log(endpointURL);
+                let contactUpdated = 0;
 
-                $.ajax({
+                return $.ajax({
                     url: endpointURL,
                     type: 'PUT',
                     data: contactInfo,
@@ -374,9 +363,12 @@
                     success: function(res) {
                         console.log("ActiveContact Response")
                         console.log(res);
+                        contactUpdated = 1;
                     }
-                });	
+                });
+                // return contactUpdated;
             }
+
 
 
             /**
@@ -470,7 +462,7 @@
                     let activeCalls = getCurrentCalls();
                     callId = activeCalls[0].id;    
                 }
-                
+
                 let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/dispose";
                 console.log(endpointURL);
                 console.log( callId);
@@ -492,8 +484,6 @@
                         console.log(success_response);
                         }
                 });
-
-
             }
 
 
@@ -809,8 +799,6 @@
                     }
                 });
             }
-
-
 
 
             /**
