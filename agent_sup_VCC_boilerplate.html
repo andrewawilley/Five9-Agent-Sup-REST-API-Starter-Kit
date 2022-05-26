@@ -475,10 +475,10 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             * setCallVariableValue returns the call attached variables for a given callID
             * 
             * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/call_variables
+            *   PUT /agents/{agentId}/interactions/calls/{callId}/variables_2
             */
-            function setDomainCallVariable(){
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
+            function setCallVariableValue(){
+                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/interactions/calls/"+callId+"/variables_2";
                 console.log(endpointURL);
                 let cavs = undefined;
 
