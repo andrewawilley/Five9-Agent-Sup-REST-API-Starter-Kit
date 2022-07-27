@@ -1,227 +1,232 @@
-<!doctype html>
-<html>     
-    <head>
-        <meta charset="utf-8">
-        <meta name="description" content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API">
-        <meta name="author" content="andrew.willey@five9.com">
+<!DOCTYPE html>
+<html>
 
-        <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
-    </head>
-    <body>
-        <main class="container">
-            <div class="row">
-                <div class="col-md-3 col-lg-2">                        <ul class="nav flex-column example-links">
-                </div>
-                <div class="col-md-9 col-lg-10">
-                    <h1>Greeting</h1>
-                    <p>do your thing</p>
-                </div>
+<head>
+    <meta charset="utf-8" />
+    <meta name="description"
+        content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API" />
+    <meta name="author" content="andrew.willey@five9.com" />
+
+    <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous" />
+</head>
+
+<body>
+    <main class="container">
+        <div class="row">
+            <div class="col-md-3 col-lg-2"></div>
+            <div class="col-md-9 col-lg-10">
+                <h1>Greeting</h1>
+                <p>do your thing</p>
             </div>
-        </main>
+        </div>
+    </main>
 
-        <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>                
-        
-        <script type="text/javascript">
-            let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
-            let five9SessionData;
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
+    </script>
 
-            /** 
-            * API Context Paths:
-            *      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
-            *      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
-            *      Supervisor REST API Services "sup_rest": "/supsvcs/rs/svc"
-            *      Websocket connection: "/appsvcs/ws/<socketkey>"
-            *           *Note:* The socketkey is optional, but only 3 sockets can exist for a user at any one time.
-            *                   Setting a random number here allows this code to be use in both an agent script AND in another browser tab
-            *                   The 4th websocket opened will cause the oldest open socket to close.
-            */
-            let randomSocketKey = (Math.random() * 1000) + 1
+    <script type="text/javascript">
+        let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
+        let five9SessionData;
 
-            let contextPaths = {
-                "agent_rest": "/appsvcs/rs/svc",
-                "agent_str": "/strsvcs/rs/svc",
-                "sup_rest": "/supsvcs/rs/svc",
-                "websocket": "/appsvcs/ws/" + randomSocketKey,
-                "supervisor_websocket": "/supsvcs/ws/" + randomSocketKey
-            }
+        /**
+         * API Context Paths:
+         *      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
+         *      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
+         *      Supervisor REST API Services "sup_rest": "/supsvcs/rs/svc"
+         *      Websocket connection: "/appsvcs/ws/<socketkey>"
+         *           *Note:* The socketkey is optional, but only 3 sockets can exist for a user at any one time.
+         *                   Setting a random number here allows this code to be use in both an agent script AND in another browser tab
+         *                   The 4th websocket opened will cause the oldest open socket to close.
+         */
+        let randomSocketKey = (Math.random() * 1000 + 1).toString().split('.')[0]
 
-            let base_api_url;
-            let base_agents_api_url;
-            let base_supervisor_api_url;
-            let base_websocket_api_url;
-            let base_supervisor_websocket_api_url;
+        let contextPaths = {
+            agent_rest: "/appsvcs/rs/svc",
+            agent_str: "/strsvcs/rs/svc",
+            sup_rest: "/supsvcs/rs/svc",
+            websocket: `/appsvcs/ws/${randomSocketKey}`,
+            supervisor_websocket: `/supsvcs/ws/${randomSocketKey}`,
+        };
 
-            let f9OrgId;
-            let f9UserId;
+        let base_api_url;
+        let base_agents_api_url;
+        let base_supervisor_api_url;
+        let base_websocket_api_url;
+        let base_supervisor_websocket_api_url;
 
-            let f9CurrentCallId;
-            let DEFAULT_CAMPAIGN_NAME = "ob_outreach";
-            let DEFAULT_DISPOSITION_ID = "1130796";
+        let f9OrgId;
+        let f9UserId;
 
-            let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
-            let DOMAIN_CAVs = {};
+        let f9CurrentCallId;
 
-            /**
-            * getCampaignInfo returns a CampaignInfo object, requires a campaignId.
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/campaigns/{campaignId}
-            * 
-            * Five9 Response sample:
-            *   {
-            *       "id":"2494",
-            *       "name":"Inbound Service",
-            *       "campaignType":"INBOUND",
-            *       "customSource":null,
-            *       "customIcon":null,
-            *       "assistances":[],
-            *       "attributes":[],
-            *       "avatarURL":null,
-            *       "chatWelcomeMessage":null,
-            *       "chatTerminateMessage":null,
-            *       "outEmail":null,
-            *       "skillIds":[],
-            *       "state":"RUNNING",
-            *       "flags":["PASS_CONTACTS_ANI_FOR_3RD_PARTY_CONFERENCES"]
-            *   }
-            * 
-            * Method return sample:
-            *   <object campaignInfo>  
-            */
-            function getCampaignInfo(campaignId) {
-                let campaignInfo;
-                $.get(base_agents_api_url+"/orgs/"+f9OrgId+"/campaigns/"+campaignId, function(res){
-                    // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
-                    // console.log(res);
-                    campaignInfo = res;
-                  });
-                return campaignInfo;
-            }
+        let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
+        let DOMAIN_CAVs = {};
 
+        /**
+         * getCampaignInfo returns a CampaignInfo object, requires a campaignId.
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/campaigns/{campaignId}
+         *
+         * Five9 Response sample:
+         *   {
+         *       "id":"2494",
+         *       "name":"Inbound Service",
+         *       "campaignType":"INBOUND",
+         *       "customSource":null,
+         *       "customIcon":null,
+         *       "assistances":[],
+         *       "attributes":[],
+         *       "avatarURL":null,
+         *       "chatWelcomeMessage":null,
+         *       "chatTerminateMessage":null,
+         *       "outEmail":null,
+         *       "skillIds":[],
+         *       "state":"RUNNING",
+         *       "flags":["PASS_CONTACTS_ANI_FOR_3RD_PARTY_CONFERENCES"]
+         *   }
+         *
+         * Method return sample:
+         *   <object campaignInfo>
+         */
+        function getCampaignInfo(campaignId) {
+            let campaignInfo;
+            $.get(`${base_agents_api_url}/orgs/${f9OrgId}/campaigns/${campaignId}`, function (res) {
+                // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
+                // console.log(res);
+                campaignInfo = res;
+            });
+            return campaignInfo;
+        }
 
-            /**
-            * getAgentCampaigns returns a dictionary of campaignInfo objects the agent skills give them access to, with the campaign name as the key.
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /agents/{agentId}/campaigns_config
-            * 
-            * Five9 Response sample:
-            * ["1234", "43802", "23423"]
-            * 
-            * method return sample:
-            * {"Inbound Service": <object campaignInfo>, "Outbound Outreach": <object campaignInfo>}
-            */
-            function getAgentCampaigns(){
-                let agentCampaignsInfo = {};
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/campaigns_config"; 
-
-                console.log(endpointURL);
-                $.get(endpointURL, function(res){
-                    console.log("Agent Campaigns:")
-                    console.log(res);
-                    res.campaignIds.forEach(function(campaignId, index){
-                        let campaign = getCampaignInfo(campaignId);
-                        //console.log("CAMPAIGN DETIAL");
-                        //console.log(campaign);
-                        agentCampaignsInfo[campaign.name] = campaign;
-                    });
-                });                
-                // console.log("CampaignsConfigInfo: ");
-                // console.log(agentCampaignsInfo);
-                return agentCampaignsInfo;
-            }
-
-
-            /**
-            * callExternalNumber initiates an outbound call to a dnis and requires EITHER a campaignName OR campaignId which will be used to make the call
-            * 
-            * Five9 VCC Agent API Method:
-            *   POST /agents/{agentId}/interactions/make_external_call
-            * 
-            * Five9 Response sample:
-            *     undefined
-            *     (status 200 OK)
-            */
-            function callExternalNumber(dnis, campaignName=null, campaignId=null){
-                
-                if(campaignId == null && campaignName == null){
-                    console.log("callExternalNumber() requires a campaignName or campaignId")
-                }
-
-                ExternalCallDestinationInfo = {
-                    number: dnis,
-                    campaignId: campaignId
-                };
-
-                if(campaignId == null){
-                    agentCampaigns = getAgentCampaigns();
-                    ExternalCallDestinationInfo["campaignId"] = agentCampaigns[campaignName].id;
-                }
-
-                if(ExternalCallDestinationInfo["campaignId"] == null){
-                    console.log("callExternalNumber() did not find a valid campaign name");
-                }
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/make_external_call";
-                console.log(endpointURL);
-                $.ajax({
-                    url: endpointURL,
-                    type: 'POST',
-                    data: JSON.stringify(ExternalCallDestinationInfo),
-                    contentType: "application/json",
-                    success: function(success_response) {
-                        console.log("Making External Call")
-                        console.log(success_response);
-                        }
-                });
-            }
-
+        function getAgentInfo(userId=f9UserId) {
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}`
             
-            /**
-            * getCurrentCalls returns an array of calls [<object CallInfo>, ] with which the agent can work
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /agents/{agentId}/interactions/calls
-            * 
-            * Five9 Response Sample <object callInfo>:
-            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]
-            */
-            function getCurrentCalls(){
-                let calls;
+            return $.get(endpointURL, function (res) {
+                console.log("Agent Info:");
+                console.log(res);
+            });
+        }
 
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls";
-                console.log(endpointURL);
 
-                return $.get( endpointURL, function(res){
-                    console.log("Returned calls:");
-                    console.log(res);
-                    calls = res;
+        /**
+         * getAgentCampaigns returns a dictionary of campaignInfo objects the agent skills give them access to, with the campaign name as the key.
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /agents/{agentId}/campaigns_config
+         *
+         * Five9 Response sample:
+         * ["1234", "43802", "23423"]
+         *
+         * method return sample:
+         * {"Inbound Service": <object campaignInfo>, "Outbound Outreach": <object campaignInfo>}
+         */
+        function getAgentCampaigns() {
+            let agentCampaignsInfo = {};
+
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/campaigns_config`;
+
+            console.log(endpointURL);
+            return $.get(endpointURL, function (res) {
+                console.log("Agent Campaigns:");
+                console.log(res);
+                res.campaignIds.forEach(function (campaignId, index) {
+                    let campaign = getCampaignInfo(campaignId);
+                    //console.log("CAMPAIGN DETIAL");
+                    //console.log(campaign);
+                    agentCampaignsInfo[campaign.name] = campaign;
                 });
+            });
+        }
 
+        /**
+         * callExternalNumber initiates an outbound call to a dnis and requires EITHER a campaignName OR campaignId which will be used to make the call
+         *
+         * Five9 VCC Agent API Method:
+         *   POST /agents/{agentId}/interactions/make_external_call
+         *
+         * Five9 Response sample:
+         *     undefined
+         *     (status 200 OK)
+         */
+        function callExternalNumber(dnis, campaignName = null, campaignId = null) {
+            if (campaignId == null && campaignName == null) {
+                console.log("callExternalNumber() requires a campaignName or campaignId");
             }
 
-            
-            /**
-            * getDomainCallVariables returns the call attached variables for a given callID
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/call_variables
-            */
-            function getDomainCallVariables(){
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
-                console.log(endpointURL);
-                let cavsList = undefined;
-                let cavs = {};
+            ExternalCallDestinationInfo = {
+                number: dnis,
+                campaignId: campaignId,
+            };
 
-                $.get( endpointURL, function(res){
-                    console.log("Domain CAVs:");
-                    console.log(res);
-                    cavsList = res;
-                });
+            if (campaignId == null) {
+                agentCampaigns = getAgentCampaigns();
+                ExternalCallDestinationInfo["campaignId"] = agentCampaigns[campaignName].id;
+            }
 
+            if (ExternalCallDestinationInfo["campaignId"] == null) {
+                console.log("callExternalNumber() did not find a valid campaign name");
+            }
+
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/make_external_call`;
+            console.log(endpointURL);
+            return $.ajax({
+                url: endpointURL,
+                type: "POST",
+                data: JSON.stringify(ExternalCallDestinationInfo),
+                contentType: "application/json",
+                success: function (success_response) {
+                    console.log("Making External Call");
+                    console.log(success_response);
+                },
+            });
+        }
+
+        /**
+         * getCurrentCalls returns an array of calls [<object CallInfo>, ] with which the agent can work
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /agents/{agentId}/interactions/calls
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]
+         */
+        function getCurrentCalls() {
+            let calls;
+
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/calls`;
+            console.log(endpointURL);
+
+            return $.get(endpointURL, function (res) {
+                console.log("Returned calls:");
+                console.log(res);
+                calls = res;
+            });
+        }
+
+        /**
+         * getDomainCallVariables returns the call attached variables for a given callID
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/call_variables
+         */
+        function getDomainCallVariables() {
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/call_variables`;
+            console.log(endpointURL);
+            let cavsList = undefined;
+            let cavs = {};
+
+            return $.get(endpointURL, function (res) {
+                console.log("Domain CAVs:");
+                console.log(res);
+                cavsList = res;
                 cavsList.forEach((cav) => {
                     cavs[cav.group] = cavs[cav.group] || {};
                     cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
@@ -232,707 +237,699 @@
                 console.log("Domain CAVs after transformation:");
                 console.log(cavs);
                 DOMAIN_CAVs = cavs;
-                return cavs;
+            });
+        }
+
+        /**
+         * setCallVariableValue returns the call attached variables for a given callID
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/call_variables
+         */
+        function setDomainCallVariable() {
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/call_variables`;
+            console.log(endpointURL);
+            let cavs = undefined;
+
+            return $.get(endpointURL, function (res) {
+                console.log("Domain CAVs:");
+                console.log(res);
+                cavs = res;
+            });
+        }
+
+        /**
+         * getContactFields returns an array of contactFields on the domain
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/contact_fields
+         *
+         * Five9 Response Sample <object domainContactFields>:
+         *   [{dataType: "NUMBER", id: "114", name: "influence_score", primary: false, restrictions: {restrictions: [], limitedSetInfo: null} }, ...]
+         */
+        function getContactFields() {
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/contact_fields`;
+            console.log(endpointURL);
+
+            let contactFields = {};
+
+            return $.get(endpointURL, function (res) {
+                console.log("Returned domain contact fields:");
+                console.log(res);
+                domainContactFields = res;
+            });
+        }
+
+        /**
+         * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/update_contact
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function updateContactInfo(
+            fieldUpdates = [{
+                1010: "TestFirstName",
+            }, ]
+        ) {
+            let contactFields = getContactFields();
+            console.log(contactFields);
+
+            let activeCalls = getCurrentCalls();
+            let activeCall = activeCalls[0];
+
+            let callId = activeCall.id;
+            console.log(activeCall);
+
+            // Process Field Updates
+            // let contact = getContactById(activeCall.activeContact.id);
+            console.log("CONTACT LOOKED UP IS: " + contact);
+            for (var i = 0; i < fieldUpdates.length; i++) {
+                activeCall.activeContact.fields[fieldUpdates[i]] = "AWTEST87";
             }
 
+            let contactInfo = JSON.stringify(activeCall.activeContact);
+            console.log(contactInfo);
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/" + callId + "/update_contact`;
 
-            /**
-            * setCallVariableValue returns the call attached variables for a given callID
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/call_variables
-            */
-            function setDomainCallVariable(){
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
-                console.log(endpointURL);
-                let cavs = undefined;
-
-                $.get( endpointURL, function(res){
-                    console.log("Domain CAVs:");
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: contactInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("ActiveContact Response");
                     console.log(res);
-                    cavs = res;
-                });
-                return cavs;
+                },
+            });
+        }
+
+        /**
+         * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
+         *
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /orgs/{orgId}/contacts/{contactId}
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function updateContactInfoByFieldName(contact, fieldUpdates) {
+            // Process Field Updates
+
+            for (const [key, value] of Object.entries(fieldUpdates)) {
+                fieldId = f9domainContactFieldIdsByFieldName[key];
+                contact.fields[fieldId] = value;
+                console.log("Updating " + key + ": " + value + "(Field ID " + fieldId);
             }
+            console.log(contact.modificationTime);
+            let contactInfo = JSON.stringify(contact);
+            console.log(contactInfo);
 
-            
-            /**
-            * getContactFields returns an array of contactFields on the domain
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/contact_fields
-            * 
-            * Five9 Response Sample <object domainContactFields>:
-            *   [{dataType: "NUMBER", id: "114", name: "influence_score", primary: false, restrictions: {restrictions: [], limitedSetInfo: null} }, ...]
-            */
-            function getContactFields(){
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/contacts/${contact.id}`;
+            console.log(endpointURL);
+            let contactUpdated = 0;
 
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/contact_fields";
-                console.log(endpointURL);
-
-                let contactFields = {};
-
-                $.get( endpointURL, function(res){
-                    console.log("Returned domain contact fields:");
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: contactInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("ActiveContact Response");
                     console.log(res);
-                    domainContactFields = res;
-                });
+                    contactUpdated = 1;
+                },
+            });
+            // return contactUpdated;
+        }
 
-
-                return domainContactFields;
-            }
-
-
-            /**
-            * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/update_contact
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function updateContactInfo(fieldUpdates=[{"1010": "TestFirstName"}]){
-                let contactFields = getContactFields();
-                console.log(contactFields);
-
-
+        /**
+         * pauseCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
+         * user's active call is obtained from getCurrentCalls()
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/pause_recording
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+         *
+         */
+        function pauseCurrentCallRecording(callId = null) {
+            if (callId === null) {
                 let activeCalls = getCurrentCalls();
-                let activeCall = activeCalls[0];
-
-                let callId = activeCall.id;                
-                console.log(activeCall);
-
-                // Process Field Updates
-                // let contact = getContactById(activeCall.activeContact.id);
-                console.log("CONTACT LOOKED UP IS: " + contact);
-                for(var i=0; i < fieldUpdates.length; i++){
-                    activeCall.activeContact.fields[fieldUpdates[i]] = "AWTEST87";
-
-                }
-
-                let contactInfo = JSON.stringify(activeCall.activeContact);
-                console.log(contactInfo);
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/update_contact";
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: contactInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("ActiveContact Response")
-                        console.log(res);
-                    }
-                });	
+                callId = activeCalls[0].id;
             }
 
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/${callId}/${pause_recording}`;
+            console.log(endpointURL);
 
-            /**
-            * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
-            *  
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /orgs/{orgId}/contacts/{contactId}
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function updateContactInfoByFieldName(contact, fieldUpdates){                
+            $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                success: function (success_response) {
+                    console.log("Recording Paused Response:");
+                    console.log(success_response);
+                },
+            });
+        }
 
-                // Process Field Updates
-
-                for (const [key, value] of Object.entries(fieldUpdates)) {
-                    fieldId = f9domainContactFieldIdsByFieldName[key];
-                    contact.fields[fieldId] = value;
-                    console.log("Updating " + key + ": " + value + "(Field ID " + fieldId);
-                }
-                console.log(contact.modificationTime);
-                let contactInfo = JSON.stringify(contact);
-                console.log(contactInfo);
-                
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/contacts/"+contact.id;
-                console.log(endpointURL);
-                let contactUpdated = 0;
-
-                return $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: contactInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("ActiveContact Response")
-                        console.log(res);
-                        contactUpdated = 1;
-                    }
-                });
-                // return contactUpdated;
-            }
-
-
-
-            /**
-            * pauseCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
-            * user's active call is obtained from getCurrentCalls() 
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/pause_recording
-            * 
-            * Five9 Response Sample <object callInfo>:
-            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
-            *   
-            */
-            function pauseCurrentCallRecording(callId=null){
-                if(callId === null){
-                    let activeCalls = getCurrentCalls();
-                    callId = activeCalls[0].id;    
-                }
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/pause_recording";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    success: function(success_response) {
-                        console.log("Recording Paused Response:")
-                        console.log(success_response);
-                        }
-                });
-            }
-
-
-            /**
-            * stopCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
-            * user's active call is obtained from getCurrentCalls() 
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/pause_recording
-            * 
-            * Five9 Response Sample <object callInfo>:
-            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
-            *   
-            */
-            function stopCurrentCallRecording(callId=null){
-                if(callId === null){
-                    let activeCalls = getCurrentCalls();
-                    callId = activeCalls[0].id;
-                }
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/stop_recording";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    success: function(success_response) {
-                        console.log("Recording Stop Response:")
-                        console.log(success_response);
-                        }
-                });
-            }
-
-
-
-            /**
-            * dispose Finishes a call and sets a disposition.  
-            * 
-            * Requires dispositionId (ID of the disposition to select.  Ignored for Internal calls).
-            * 
-            * Optional timeout parameter equal to or less than one year (366*24*60*60*1000) in ms.
-            * Use when the agent wants to change the default value.
-            * 
-            * If the disposition flag is MUST_CONFIRM, show a confirmation window to the agent. If the
-            * agent confirms the disposition, set the disposition.
-            * If the call is associated with a preview session, the call is not necessarily finalized:
-            * • If the disposition is not final, the call might be set to the WRAP_UP state. In this
-            * case, the preview is set to RENEWING. The server remembers the options
-            * parameter in the request to apply the disposition later when the call is finalized.
-            * • If the disposition is final, the call and the preview are finalized immediately.
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/dispose
-            * 
-            * Five9 Response Sample <object callInfo>:
-            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
-            *   
-            */
-            function disposeCurrentCall(callId=null, dispositionId, timeout=null){
-                if(callId === null){
-                    let activeCalls = getCurrentCalls();
-                    callId = activeCalls[0].id;    
-                }
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/dispose";
-                console.log(endpointURL);
-                console.log( callId);
-                disposeOptionsInfo = {
-                    "dispositionId": dispositionId,
-                }
-
-                if(timeout != null) {
-                    disposeOptionsInfo["timeout"]
-                }
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: JSON.stringify(disposeOptionsInfo),
-                    contentType: "application/json",
-                    success: function(success_response) {
-                        console.log("Disposition Response:")
-                        console.log(success_response);
-                        }
-                });
-            }
-
-
-            /**
-            * resumeCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
-            * user's active call is obtained from getCurrentCalls() 
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/resume_recording
-            * 
-            * Five9 Response Sample <object callInfo>:
-            *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
-            *   
-            */
-            function resumeCurrentCallRecording(callId=null){
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/resume_recording";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    done: function(success_response) {
-                        console.log("Recording Resumed Response:")
-                        console.log(success_response);
-                        },
-                    success: function(success_response) {
-                        console.log("Recording Resumed Response:")
-                        console.log(success_response);
-                        }
-                });
-            }
-
-            /**
-            * initiateConferenceTransfer adds a DNIS to the call.  Set warm=true for a warm conference (1st party on hold). 
-            * 
-            * Five9 VCC Agent API Method:
-            *   POST /agents/{agentId}/interactions/calls/{callId}/add_external_to_conference
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function initiateConferenceTransfer(callId, dnis, warm=false, checkDNC=true, includeCallerInfo=true){
-                
-                let destinationInfo = JSON.stringify({
-                    "number": dnis, 
-                    "warm": warm, 
-                    "checkDNC": checkDNC, 
-                    "includeCallerInfo": includeCallerInfo
-                });
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/add_external_to_conference";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'POST',
-                    data: destinationInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Conference Response")
-                        console.log(res);
-                    }
-                });	
-            }
-
-            /**
-            * initiateTransferToExternal transfers the call to an external number.  Set warm=true for a warm transfer (1st party on hold). 
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/transfer_to_external_number
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function initiateTransferToExternal(dnis, dispositionId="-23", dispositionTimeout=300000, timeout=0, warm=false, skipDNCCheck=false){
+        /**
+         * stopCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
+         * user's active call is obtained from getCurrentCalls()
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/pause_recording
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+         *
+         */
+        function stopCurrentCallRecording(callId = null) {
+            if (callId === null) {
                 let activeCalls = getCurrentCalls();
-                let callId = activeCalls[0].id;
-
-                let externalTransferDestinationInfo = JSON.stringify({
-                    "destination": {
-                        "skipDNCCheck": skipDNCCheck,
-                        "checkMultipleContacts": true,
-                        "number": dnis, 
-                    },
-                    // "dispositionId": dispositionId,
-                    "warm": warm, 
-                    "dispositionTimeout": dispositionTimeout,
-                    "timeout": timeout,
-                });
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/transfer_to_external_number";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: externalTransferDestinationInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("External Transfer Response")
-                        console.log(res);
-                    }
-                });	
+                callId = activeCalls[0].id;
             }
 
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/${callId}/stop_recording`;
+            console.log(endpointURL);
 
-            /**
-            * addCampaignToConference transfers the call to an external number.  Set warm=true for a warm transfer (1st party on hold). 
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/add_campaign_to_conference
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function addCampaignToConference(campaignId="1140040", warm=false){
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                success: function (success_response) {
+                    console.log("Recording Stop Response:");
+                    console.log(success_response);
+                },
+            });
+        }
+
+        /**
+         * dispose Finishes a call and sets a disposition.
+         *
+         * Requires dispositionId (ID of the disposition to select.  Ignored for Internal calls).
+         *
+         * Optional timeout parameter equal to or less than one year (366*24*60*60*1000) in ms.
+         * Use when the agent wants to change the default value.
+         *
+         * If the disposition flag is MUST_CONFIRM, show a confirmation window to the agent. If the
+         * agent confirms the disposition, set the disposition.
+         * If the call is associated with a preview session, the call is not necessarily finalized:
+         * • If the disposition is not final, the call might be set to the WRAP_UP state. In this
+         * case, the preview is set to RENEWING. The server remembers the options
+         * parameter in the request to apply the disposition later when the call is finalized.
+         * • If the disposition is final, the call and the preview are finalized immediately.
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/dispose
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+         *
+         */
+        function disposeCurrentCall(callId = null, dispositionId, timeout = null) {
+            if (callId === null) {
                 let activeCalls = getCurrentCalls();
-                let callId = activeCalls[0].id;
-
-                let campaignInfo = JSON.stringify({
-                    "campaignId": campaignId,
-                    "warm": warm
-                });
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/add_campaign_to_conference";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'POST',
-                    data: campaignInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Add Campaign To Conference")
-                        console.log(res);
-                    }
-                });	
+                callId = activeCalls[0].id;
             }
 
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/${callId}/dispose`;
+            console.log(endpointURL);
+            console.log(callId);
+            disposeOptionsInfo = {
+                dispositionId: dispositionId,
+            };
 
-            /**
-            * Returns active skills prompts information for the specified agent
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /agents/{agentId}/prompts
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function getPrompts(){
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/prompts";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'GET',
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Prompts")
-                        console.log(res);
-                    }
-                });	
+            if (timeout != null) {
+                disposeOptionsInfo["timeout"];
             }
 
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: JSON.stringify(disposeOptionsInfo),
+                contentType: "application/json",
+                success: function (success_response) {
+                    console.log("Disposition Response:");
+                    console.log(success_response);
+                },
+            });
+        }
 
-            /**
-            * Returns speed dials
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/speed_dials
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function getDomainSpeedDials(){
+        /**
+         * resumeCurrentCallRecording stops call recording for a given callId. If no callId is provided, the
+         * user's active call is obtained from getCurrentCalls()
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/resume_recording
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+         *
+         */
+        function resumeCurrentCallRecording(callId = null) {
+            let endpointURL =
+                `${base_agents_api_url}/agents/"${f9UserId}"/interactions/calls/"${callId}"/resume_recording`;
+            console.log(endpointURL);
 
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/speed_dials";
-                console.log(endpointURL);
-                let speedDials = undefined;
-                return $.ajax({
-                    url: endpointURL,
-                    type: 'GET',
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("SpeedDials")
-                        console.log(res);
-                        speedDials = res;
-                    }
-                });	
-                // return speedDials;
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                done: function (success_response) {
+                    console.log("Recording Resumed Response:");
+                    console.log(success_response);
+                },
+                success: function (success_response) {
+                    console.log("Recording Resumed Response:");
+                    console.log(success_response);
+                },
+            });
+        }
+
+        /**
+         * initiateConferenceTransfer adds a DNIS to the call.  Set warm=true for a warm conference (1st party on hold).
+         *
+         * Five9 VCC Agent API Method:
+         *   POST /agents/{agentId}/interactions/calls/{callId}/add_external_to_conference
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function initiateConferenceTransfer(callId, dnis, warm = false, checkDNC = true, includeCallerInfo = true) {
+            let destinationInfo = JSON.stringify({
+                number: dnis,
+                warm: warm,
+                checkDNC: checkDNC,
+                includeCallerInfo: includeCallerInfo,
+            });
+
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/${callId}/add_external_to_conference`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "POST",
+                data: destinationInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Conference Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * initiateTransferToExternal transfers the call to an external number.  Set warm=true for a warm transfer (1st party on hold).
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/transfer_to_external_number
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function initiateTransferToExternal(
+            dnis,
+            dispositionId = "-23",
+            dispositionTimeout = 300000,
+            timeout = 0,
+            warm = false,
+            skipDNCCheck = false
+        ) {
+            let activeCalls = getCurrentCalls();
+            let callId = activeCalls[0].id;
+
+            let externalTransferDestinationInfo = JSON.stringify({
+                destination: {
+                    skipDNCCheck: skipDNCCheck,
+                    checkMultipleContacts: true,
+                    number: dnis,
+                },
+                // "dispositionId": dispositionId,
+                warm: warm,
+                dispositionTimeout: dispositionTimeout,
+                timeout: timeout,
+            });
+
+            let endpointURL =
+                `${base_agents_api_url}/agents/"${f9UserId}/interactions/calls/${callId}/transfer_to_external_number`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: externalTransferDestinationInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("External Transfer Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * addCampaignToConference transfers the call to an external number.  Set warm=true for a warm transfer (1st party on hold).
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/add_campaign_to_conference
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function addCampaignToConference(campaignId = "1140040", warm = false) {
+            let activeCalls = getCurrentCalls();
+            let callId = activeCalls[0].id;
+
+            let campaignInfo = JSON.stringify({
+                campaignId: campaignId,
+                warm: warm,
+            });
+
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/"${callId}/add_campaign_to_conference`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "POST",
+                data: campaignInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Add Campaign To Conference");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * Returns active skills prompts information for the specified agent
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /agents/{agentId}/prompts
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function getPrompts() {
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/prompts`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "GET",
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Prompts");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * Returns speed dials
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/speed_dials
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function getDomainSpeedDials() {
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/speed_dials`;
+            console.log(endpointURL);
+            let speedDials = undefined;
+            return $.ajax({
+                url: endpointURL,
+                type: "GET",
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("SpeedDials");
+                    console.log(res);
+                    speedDials = res;
+                },
+            });
+            // return speedDials;
+        }
+
+        /**
+         * get EWT for a specific skill
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/speed_dials
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function getEwtForSkill(skillGroupId, mediaTypeId = "3000") {
+            let endpointURL =
+                `${base_supervisor_api_url}/orgs/${f9OrgId}/ewt/group/${skillGroupId}/${mediaTypeId}`;
+            console.log(endpointURL);
+            let ewtResponse = undefined;
+            return $.ajax({
+                url: endpointURL,
+                type: "GET",
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("SpeedDials");
+                    console.log(res);
+                    ewtResponse = res;
+                },
+            });
+        }
+
+        /**
+         * play_prompt plays an audio prompt on the agent interaction
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/audio/player/play_prompt
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function playPrompt(promptId) {
+            let activeCalls = getCurrentCalls();
+            let callId = activeCalls[0].id;
+
+            let promptInfo = JSON.stringify({
+                value: promptId,
+            });
+
+            let endpointURL =
+                `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/"${callId}/audio/player/play_prompt`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: promptInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Conference Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * callRecordingView creates a Call Recording View
+         *
+         * Five9 VCC Agent API Method:
+         *   POST /supervisors/{supervisorId}/agents/{agentId}/recording_views
+         *
+         * Five9 Response Sample:
+         *   {id: "e8336041-aceb-4a6b-900a-8bb64ce9ab8b", records: Array(<len>), recordsTotal: <len>, hasMore: false, currentPage: 0}
+         */
+        function callRecordingView(limit = 300, sortField = "NAME", ascending = true, target_agentID = "") {
+            RecordingsViewOptions = JSON.stringify({
+                limit: limit,
+                sortField: sortField.toUpperCase(),
+                ascending: "true",
+            });
+
+            let endpointURL =
+                `${base_supervisor_api_url}/supervisors/${f9UserId}/agents/${target_agentID}/recording_views`;
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "POST",
+                data: RecordingsViewOptions,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("VM List Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * getContactById obtains contact record by ContactId
+         *
+         * Five9 VCC Agent API Method:
+         *   CONTEXT PATH
+         *   GET /orgs/{orgId}/contacts/{contactId}
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function getContactById(contactId) {
+            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/contacts/${contactId}`;
+            console.log("getContactById" + endpointURL);
+
+            let contactResult = {};
+            return $.ajax({
+                url: endpointURL,
+                type: "GET",
+                //data: contactInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("DomainContactLookup Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * assignContactToCall assigns a contact record to a call
+         *
+         * Five9 VCC Agent API Method:
+         *   CONTEXT PATH /supsvcs/rs/svc
+         *   PUT /{agentId}/interactions/calls/{callId}/active_contact_2
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function assignContactToCall(contactId) {
+            let callId = getCurrentCalls()[0].id;
+
+            contactResult = getContactById(contactId);
+            console.log("here: " + contactResult);
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/calls/${callId}/active_contact_2`;
+            console.log(endpointURL);
+
+            let contactInfo = JSON.stringify({
+                value: contactId,
+            });
+
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: contactInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("AssignedContact Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        function getSessionMetadata() {
+            return $.get(freedomMetadataURL, function (data) {
+                five9SessionData = data;
+                f9OrgId = five9SessionData.orgId;
+                f9UserId = five9SessionData.userId;
+
+                let host = five9SessionData.metadata.dataCenters[0].apiUrls[0].host;
+                let port = five9SessionData.metadata.dataCenters[0].apiUrls[0].port
+                base_api_url = `https://${host}:${port}`;
+                base_ws_url = `wss://${host}:${port}`;
+
+                base_agents_api_url = `${base_api_url}${contextPaths.agent_rest}`;
+                base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
+                base_websocket_api_url = base_ws_url + contextPaths.websocket;
+
+                console.log("user ID: " + five9SessionData.userId);
+                console.log("Base Supervisor API URL: " + base_supervisor_api_url);
+                console.log("Base Agent API URL: " + base_agents_api_url);
+                // console.log(data);
+            }).fail(function (data) {
+                console.log("You must be logged into Five9 in another browser tab for this to work");
+                $(".example-links").hide();
+            });
+        }
+
+        class f9socketEvent {
+            constructor(eventName, handler) {
+                this.eventName = eventName;
+                this.handle = handler;
             }
+        }
 
+        // THIS is where you would build out event handlers for things that you care about
+        let f9socketEventHandlers = {
+            4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
+                console.log(this.eventName, eventData.context.eventReason);
+                console.log(eventData);
 
-            /**
-            * get EWT for a specific skill
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/speed_dials
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function getEwtForSkill(skillGroupId, mediaTypeId="3000"){
+                // EXAMPLE use events to stop/start recording for all calls
+                // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
+                // let stopRecordingStates = ["TALKING"];
 
-                let endpointURL = base_supervisor_api_url+"/orgs/"+f9OrgId+"/ewt/group/"+skillGroupId+"/"+mediaTypeId;
-                console.log(endpointURL);
-                let ewtResponse = undefined;
-                $.ajax({
-                    url: endpointURL,
-                    type: 'GET',
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("SpeedDials")
-                        console.log(res);
-                        ewtResponse = res;
-                    }
-                });	
-                return ewtResponse;
-            }
+                //if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state))
+            }),
 
-            /**
-            * play_prompt plays an audio prompt on the agent interaction
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/audio/player/play_prompt
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function playPrompt(promptId){
-                let activeCalls = getCurrentCalls();
-                let callId = activeCalls[0].id;
+            5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
+                console.log(this.eventName, eventData.context.eventReason);
+                console.log(eventData);
+            }),
+        };
 
-                let promptInfo = JSON.stringify({
-                    "value": promptId
-                });
+        $(document).ready(function () {
+            // set crossDomain to allow page to run in separate tab and not on a campaign script
+            $.ajaxSetup({
+                crossDomain: true,
+                xhrFields: {
+                    withCredentials: true,
+                },
+            });
 
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/audio/player/play_prompt";
-                console.log(endpointURL);
+            // first obtain session metadata, and once that is complete, open a socket
+            $.when(getSessionMetadata()).then(function (sessionMetaData) {
+                console.info("Session Metadata:", sessionMetaData);
+                const socket = new window.WebSocket(base_websocket_api_url);
+                let pingIntervalHandle = null;
 
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: promptInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Conference Response")
-                        console.log(res);
-                    }
-                });	
-            }
+                socket.onopen = function () {
+                    // Socket has to be kept alive with one ping every 15 seconds
+                    pingIntervalHandle = window.setInterval(function () {
+                        socket.send("ping");
+                    }, 15000);
+                    console.info("Websocket Opened");
+                };
 
-
-            /**
-            * callRecordingView creates a Call Recording View
-            * 
-            * Five9 VCC Agent API Method:
-            *   POST /supervisors/{supervisorId}/agents/{agentId}/recording_views
-            * 
-            * Five9 Response Sample:
-            *   {id: "e8336041-aceb-4a6b-900a-8bb64ce9ab8b", records: Array(<len>), recordsTotal: <len>, hasMore: false, currentPage: 0}
-            */
-            function callRecordingView(limit=300, sortField="NAME", ascending=true, target_agentID=""){
-                RecordingsViewOptions = JSON.stringify({
-                        limit: limit,
-                        sortField: sortField.toUpperCase(),
-                        ascending: "true"
-                });
-
-                let endpointURL = base_supervisor_api_url+"/supervisors/"+f9UserId+"/agents/"+target_agentID+"/recording_views";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'POST',
-                    data: RecordingsViewOptions,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("VM List Response")
-                        console.log(res);
-                    }
-                });	
-            }
-
-
-
-
-            /**
-            * getContactById obtains contact record by ContactId
-            * 
-            * Five9 VCC Agent API Method:
-            *   CONTEXT PATH 
-            *   GET /orgs/{orgId}/contacts/{contactId}
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function getContactById(contactId){           
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/contacts/"+contactId;
-                console.log("getContactById"+endpointURL);
-
-                let contactResult = {};
-                $.ajax({
-                    url: endpointURL,
-                    type: 'GET',
-                    //data: contactInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("DomainContactLookup Response")
-                        console.log(res);
-                    }
-                });
-            }
-
-
-            /**
-            * assignContactToCall assigns a contact record to a call
-            * 
-            * Five9 VCC Agent API Method:
-            *   CONTEXT PATH /supsvcs/rs/svc
-            *   PUT /{agentId}/interactions/calls/{callId}/active_contact_2
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function assignContactToCall(contactId){           
-                let callId = getCurrentCalls()[0].id;
-
-                contactResult = getContactById(contactId);
-                console.log("here: "+ contactResult);
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/active_contact_2";
-                console.log(endpointURL);
-
-                let contactInfo = JSON.stringify({
-                    "value": contactId
-                });
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: contactInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("AssignedContact Response")
-                        console.log(res);
-                    }
-                });	
-            }
-
-
-            function getSessionMetadata(){
-                return $.get(freedomMetadataURL, function( data ) {
-                    five9SessionData = data;
-                    f9OrgId = five9SessionData.orgId;
-                    f9UserId = five9SessionData.userId;
-
-                    base_api_url = "https://" + five9SessionData.metadata.dataCenters[0].apiUrls[0].host + ":" + five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
-                    base_ws_url = "wss://" + five9SessionData.metadata.dataCenters[0].apiUrls[0].host + ":" + five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
-                    
-                    base_agents_api_url = base_api_url + contextPaths.agent_rest;
-                    base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
-                    base_websocket_api_url = base_ws_url + contextPaths.websocket;
-
-                    console.log(("user ID: " + five9SessionData.userId));
-                    console.log("Base Supervisor API URL: " + base_supervisor_api_url);
-                    console.log("Base Agent API URL: " + base_agents_api_url);
-                    // console.log(data);
-                }).fail(function (data){
-                    console.log("You must be logged into Five9 in another browser tab for this to work");
-                    $(".example-links").hide();
-                });
-            }
-
-            class f9socketEvent {
-                constructor(eventName, handler) {
-                    this.eventName = eventName
-                    this.handle = handler
-                }
-            }
-
-            // THIS is where you would build out event handlers for things that you care about
-            let f9socketEventHandlers = {
-                "4": new f9socketEvent("EVENT_CALL_UPDATED", function(eventData){
-                    console.log(this.eventName, eventData.context.eventReason);
-                    console.log(eventData);
-                    
-                    // EXAMPLE use events to stop/start recording for all calls
-                    // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
-                    // let stopRecordingStates = ["TALKING"];
-
-                    //if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state))
-                
-                }),
-                
-                "5": new f9socketEvent("EVENT_CALL_DELETED", function(eventData){
-                    console.log(this.eventName, eventData.context.eventReason);
-                    console.log(eventData);
-                })
-            }
-
-            $( document ).ready(function() {
-
-                // set crossDomain to allow page to run in separate tab and not on a campaign script
-                $.ajaxSetup({
-                    crossDomain: true,
-                    xhrFields: {
-                        withCredentials: true
-                    }
-                });
-
-                // first obtain session metadata, and once that is complete, open a socket
-                $.when(getSessionMetadata()).then(function(sessionMetaData){
-                    console.info('Session Metadata:', sessionMetaData);
-                    const socket = new window.WebSocket(base_websocket_api_url);
-                    let pingIntervalHandle = null;  
-
-                    socket.onopen = function () {
-                        // Socket has to be kept alive with one ping every 15 seconds
-                        pingIntervalHandle = window.setInterval(function() {
-                            socket.send('ping');
-                        }, 15000);
-                        console.info('Websocket Opened')
-                    };
-
-                    // attach a callback function to the "message" events on the socket
-                    socket.addEventListener('message', function(event) {
-                        eventData = JSON.parse(event.data);
-                        eventHandler = f9socketEventHandlers[eventData.context.eventId];
-                        if(eventHandler){
-                            eventHandler.handle(eventData);
-                        } else {
-                            f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent("Unhandled Socket Event", function(eventData){
-                                //console.log(this.eventName, eventData.context.eventReason)
+                // attach a callback function to the "message" events on the socket
+                socket.addEventListener("message", function (event) {
+                    eventData = JSON.parse(event.data);
+                    eventHandler = f9socketEventHandlers[eventData.context.eventId];
+                    if (eventHandler) {
+                        eventHandler.handle(eventData);
+                    } else {
+                        f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
+                            "Unhandled Socket Event",
+                            function (
+                                eventData
+                            ) {
+                                console.log(this.eventName, eventData.context.eventReason)
                             });
-                        }
-                        // console.log(eventData);
-                    });
-
-                    socket.onclose = function() {
-                        window.clearInterval(pingIntervalHandle);
                     }
+                    console.log(eventData);
+                });
 
-                    window.addEventListener('unload', function () {
-                        socket.close();
-                    })
+                socket.onclose = function () {
+                    window.clearInterval(pingIntervalHandle);
+                };
+
+                window.addEventListener("unload", function () {
+                    socket.close();
                 });
             });
-        </script>
-    </body>
+        });
+    </script>
+</body>
+
 </html>
