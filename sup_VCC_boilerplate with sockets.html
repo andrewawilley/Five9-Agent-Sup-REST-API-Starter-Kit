@@ -17,8 +17,8 @@
         <div class="row">
             <div class="col-md-3 col-lg-2"></div>
             <div class="col-md-9 col-lg-10">
-                <h1>Greeting</h1>
-                <p>do your thing</p>
+                <h1>Greeting - Supervisor</h1>
+                <p>work-in-progress</p>
             </div>
         </div>
     </main>
@@ -210,17 +210,6 @@
                 calls = res;
             });
         }
-
-        function click2dial(campaignId) {
-            let campaignInfo;
-            $.get(`${base_agents_api_url}/orgs/${f9OrgId}/interactions/click_to_dial?number=9133259337&dialImmediately=true&skipDNCCheck=true&campaignId=ob_outreach&autoResolveDialingRules=true&skipMultipleContactsCheck=true`, 
-            function (res) {
-                // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
-                console.log(res);
-
-            });
-        }
-
 
         /**
          * getDomainCallVariables returns the call attached variables for a given callID
@@ -853,6 +842,7 @@
                 base_agents_api_url = `${base_api_url}${contextPaths.agent_rest}`;
                 base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
                 base_websocket_api_url = base_ws_url + contextPaths.websocket;
+                base_supervisor_websocket_api_url = base_ws_url + contextPaths.supervisor_websocket
 
                 console.log("user ID: " + five9SessionData.userId);
                 console.log("Base Supervisor API URL: " + base_supervisor_api_url);
@@ -902,8 +892,10 @@
             // first obtain session metadata, and once that is complete, open a socket
             $.when(getSessionMetadata()).then(function (sessionMetaData) {
                 console.info("Session Metadata:", sessionMetaData);
-                const socket = new window.WebSocket(base_websocket_api_url);
+                console.log(`SUP WEBSOCKET URL: ${base_supervisor_websocket_api_url}`)
+                const socket = new window.WebSocket(base_supervisor_websocket_api_url);
                 let pingIntervalHandle = null;
+
                 socket.onopen = function () {
                     // Socket has to be kept alive with one ping every 15 seconds
                     pingIntervalHandle = window.setInterval(function () {
@@ -915,17 +907,15 @@
                 // attach a callback function to the "message" events on the socket
                 socket.addEventListener("message", function (event) {
                     eventData = JSON.parse(event.data);
-                    if(window.location.search.indexOf("verbose=true") > -1){
-                        console.log(eventData.context.eventId + ": " + eventData.context.eventReason)
-                        console.log(eventData);
-                    }
                     eventHandler = f9socketEventHandlers[eventData.context.eventId];
                     if (eventHandler) {
                         eventHandler.handle(eventData);
                     } else {
                         f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
                             "Unhandled Socket Event",
-                            function (eventData) {
+                            function (
+                                eventData
+                            ) {
                                 console.log(this.eventName, eventData.context.eventReason)
                             });
                     }

@@ -26,7 +26,8 @@
         
         <script type="text/javascript">
             
-            let promptPlayOnConnect = "tmi_quality_record_line_renee_testing";
+            // Change to a specific prompt that exists on your domain
+            let promptPlayOnConnect = "QRL";
 
             
             let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
@@ -285,7 +286,7 @@
                             eventHandler.handle(eventData);
                         } else {
                             f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent("Unhandled Socket Event", function(eventData){
-                                //console.log(this.eventName, eventData.context.eventReason)
+                                console.log(this.eventName, eventData.context.eventReason)
                             });
                         }
                         if(window.location.search.indexOf("verbose=true") > -1 && eventHandler == undefined){
