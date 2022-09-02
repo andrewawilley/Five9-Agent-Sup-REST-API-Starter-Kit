@@ -906,6 +906,7 @@
                 let pingIntervalHandle = null;
                 socket.onopen = function () {
                     // Socket has to be kept alive with one ping every 15 seconds
+                    getCurrentCalls();
                     pingIntervalHandle = window.setInterval(function () {
                         socket.send("ping");
                     }, 15000);

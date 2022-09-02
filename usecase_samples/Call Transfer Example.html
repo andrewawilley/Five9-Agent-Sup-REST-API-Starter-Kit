@@ -14,13 +14,11 @@
                     <p><button type="button" class="btn btn-primary leave-conference sticky-top" disposition="Test Call">Complete Transfer - Success</button></p>
                     <p><button type="button" class="btn btn-primary leave-conference sticky-top" disposition="Completed">Complete Transfer - Mildly Successful</button></p>
                     <p><button type="button" class="btn btn-primary leave-conference sticky-top" disposition="Completed">End call Completed Disposition</button></p>
-                    <p><button type="button" class="btn btn-primary disconnect-conference-participants sticky-top">Disconnect 3rd Party, Return to Call</button></p>
-                    
+                    <p><button type="button" class="btn btn-primary disconnect-conference-participants sticky-top">Disconnect 3rd Party, Return to Call</button></p>                    
                 </div>
                 <div class="col-md-7 col-lg-10">
                     <h1>Agent Scripting can go here</h1>
                     <p>content</p>
-                    <a href="#" class="launch_adt">Click to launch ADT</a>
                 </div>
             </div>
         </main>
@@ -95,38 +93,6 @@
 
             
             /**
-            * getDomainCallVariables returns the call attached variables for a given callID
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/call_variables
-            */
-            function getDomainCallVariables(){
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
-                console.log(endpointURL);
-                let cavsList = undefined;
-                let cavs = {};
-
-                $.get( endpointURL, function(res){
-                    console.log("Domain CAVs:");
-                    console.log(res);
-                    cavsList = res;
-                });
-
-                cavsList.forEach((cav) => {
-                    cavs[cav.group] = cavs[cav.group] || {};
-                    cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
-                    cavs[cav.group][cav.name]["id"] = cav.id;
-                    cavs[cav.group][cav.name]["type"] = cav.type;
-                    cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
-                });
-                console.log("Domain CAVs after transformation:");
-                console.log(cavs);
-                DOMAIN_CAVs = cavs;
-                return cavs;
-            }
-
-            
-            /**
             * getCampaignDispositions returns the dispositions for the current call campaign
             * 
             * Five9 VCC Agent API Method:
@@ -142,40 +108,7 @@
                     console.log(dispositionsResponse);
 
                 });
-
-            // cavsList.forEach((cav) => {
-            //     cavs[cav.group] = cavs[cav.group] || {};
-            //     cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
-            //     cavs[cav.group][cav.name]["id"] = cav.id;
-            //     cavs[cav.group][cav.name]["type"] = cav.type;
-            //     cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
-            // });
-
-            // console.log("Domain CAVs after transformation:");
-            // console.log(cavs);
-            // DOMAIN_CAVs = cavs;
             }
-
-
-            /**
-            * setCallVariableValue returns the call attached variables for a given callID
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /orgs/{orgId}/call_variables
-            */
-            function setDomainCallVariable(){
-                let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
-                console.log(endpointURL);
-                let cavs = undefined;
-
-                $.get( endpointURL, function(res){
-                    console.log("Domain CAVs:");
-                    console.log(res);
-                    cavs = res;
-                });
-                return cavs;
-            }
-
 
             /**
             * dispose Finishes a call and sets a disposition.  
@@ -231,7 +164,8 @@
 
 
             /**
-            * initiateConferenceTransfer adds a DNIS to the call.  Set warm=true for a warm conference (1st party on hold). 
+            * initiateConferenceTransferToExternal adds an external DNIS to the call as a conference participant.
+            * Set warm=true for a warm conference (1st party on hold). 
             * 
             * Five9 VCC Agent API Method:
             *   POST /agents/{agentId}/interactions/calls/{callId}/add_external_to_conference
@@ -239,7 +173,7 @@
             * Five9 Response Sample:
             *   
             */
-            function initiateConferenceTransfer(callId, dnis, warm=false, checkDNC=true, includeCallerInfo=true){
+            function initiateConferenceTransferToExternal(callId, dnis, warm=false, checkDNC=true, includeCallerInfo=true){
                 
                 let destinationInfo = JSON.stringify({
                     "number": dnis, 
@@ -300,7 +234,7 @@
                 let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/disconnectConferenceParticipant";
                 console.log(endpointURL);
 
-                $.ajax({
+                return $.ajax({
                     url: endpointURL,
                     type: 'PUT',
                     contentType: "application/json",
@@ -415,9 +349,7 @@
                     $(".leave-conference").hide();
                     $(".disconnect-conference-participants").hide();
                     const socket = new window.WebSocket(base_websocket_api_url);
-                    let pingIntervalHandle = null;
-
-                    
+                    let pingIntervalHandle = null;                    
 
                     socket.onopen = function () {
                         // Socket has to be kept alive with one ping every 15 seconds
@@ -455,7 +387,7 @@
                         let destination = $(this).attr("destination");
                         $.when(getCurrentCalls()).then(function(calls){
                             console.log("destination: " + destination);
-                            initiateConferenceTransfer(calls[0].id,destination);
+                            initiateConferenceTransferToExternal(calls[0].id,destination);
                             console.log(conferenceParticipant);
                         })
                     })
