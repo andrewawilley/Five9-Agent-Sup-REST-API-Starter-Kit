@@ -242,16 +242,6 @@
                         withCredentials: true
                     }
                 });
-                
-                window.parent.$('ul.connectors > div > li > a').each(function() {
-                    var tempText = $(this).text().replace("<i class></i>","");
-                    if (tempText.trim() == "EDDY Speakeasy - Autolaunch - Workaround") {
-                        this.click();
-                    }
-                });
-                window.parent.$('span:contains("Connector")').click();
-                window.parent.$('span:contains("History")').parent().css('display','none');
-                window.parent.$('.contact-history-preview').css('display','none');
         
                 // first obtain session metadata, and once that is complete, open a socket
                 $.when(getSessionMetadata()).then(function(sessionMetaData){

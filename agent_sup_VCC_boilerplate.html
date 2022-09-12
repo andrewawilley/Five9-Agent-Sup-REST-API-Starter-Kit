@@ -1057,9 +1057,9 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
             // GET /supervisors/{supervisorId}/skills/{skillId}/snapshot
             
             $( document ).ready(function() {
-                // Set async to FALSE for examples only.  In a normal use-case using deferred When->Then is preferred.
                 $.ajaxSetup({
                     crossDomain: true,
+                    // Set async to FALSE for examples only.  In a "real" usecase using deferred When->Then is preferred.
                     async: false,
                     xhrFields: {
                         withCredentials: true
