@@ -340,9 +340,6 @@
                     }
                 });
 
-                $('.launch_adt').click(function(){
-                    window.open("https://app.five9.com/appsvcs/saml/sp/131965/Five9TAMsAzureAciveDirectory/alias/adt", "Popup", "location,status,scrollbars,resizable,width=300, height=800");
-                })
                 // first obtain session metadata, and once that is complete, open a socket
                 $.when(getSessionMetadata()).then(function(sessionMetaData){
                     console.info('Session Metadata:', sessionMetaData);
