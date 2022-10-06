@@ -117,6 +117,27 @@
                 });
             }
 
+            /**
+            * updateCallVariableValues returns the call attached variables for a given callID
+            * 
+            * Five9 VCC Agent API Method:
+            *   PUT /agents/{f9UserId}/interactions/calls/{f9CurrentCallId}/variables_2
+            */
+            function updateCallVariableValues(cavsToUpdate){
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+f9CurrentCallId+"/variables_2";
+                console.log(endpointURL);
+
+                return $.ajax({
+                    url: endpointURL,
+                    type: 'PUT',
+                    data: JSON.stringify(cavsToUpdate),
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("CAVs Updated Response")
+                        console.log(res);
+                    }
+                });	
+            }
 
             /**
             * Returns active skills prompts information for the specified agent
@@ -286,10 +307,23 @@
                             f9CurrentCallId = f9CurrentCalls[0].id
 
                             $.when(getDomainCallVariables()).then(function(cavs){
-                                cavs["asdf"]
+                                // populate the cavsToUpdate variable with the ID of the target CAV
+                                // and the desired new value.
+                                //
+                                // For example, if there is a domain variable group called "debug"
+                                // and a variable in that group called "test", obtain the
+                                // ID of that CAV from the f9CAVs script variable that is set by the
+                                // getDomainCallVariables method:
+                                //     f9CAVs.debug.test.id
+                                //
+                                // If for example a truncated version of the Five9 agent username needs
+                                // to be stored in the debug.test variable:
+                                cavsToUpdate = {}
+                                cavsToUpdate[f9CAVs.debug.test.id] = "@Agent.user_name@".split("@")[0];
+                                $.when(updateCallVariableValues(cavsToUpdate)).then(function(response){
+                                    // optionally do more after the variable has been updated
+                                });
                             })
-
-
                          })
                     }
 
