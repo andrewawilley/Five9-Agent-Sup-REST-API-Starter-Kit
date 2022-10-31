@@ -9,8 +9,9 @@
         <main class="container">
             <div class="row">
                 <div class="col-md-5 col-lg-2">                        
-                    <p><button type="button" class="btn btn-primary trigger-transfer sticky-top" destination="CHANGE THIS">Tranfser to Step2</button></p>
-                    <p><button type="button" class="btn btn-primary trigger-transfer sticky-top" destination="5995595610">Tranfser to Andrew Test</button></p>
+                    <p><button type="button" class="btn btn-primary trigger-transfer sticky-top" destination="campaign:aw_tam_test">Tranfser to Campaign</button></p>
+                    <p><button type="button" class="btn btn-primary trigger-transfer sticky-top" destination="external:5995595610">Tranfser to specific DNIS</button></p>
+                    <p><button type="button" class="btn btn-primary trigger-transfer sticky-top" destination="speed:Different Test">Tranfser to Speed Dial by Description</button></p>
                 </div>
                 <div class="col-md-7 col-lg-10">
                     <h1>Agent Scripting can go here</h1>
@@ -58,9 +59,8 @@
             let f9CurrentCallId;
             let f9CurrentCallCampaignId;
 
-            let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
-            let DOMAIN_CAVs = {};
-
+            let f9InboundCampaigns;
+            let f9SpeedDials;
             
             /**
             * getCurrentCalls returns an array of calls [<object CallInfo>, ] with which the agent can work
@@ -86,8 +86,8 @@
                 });
 
             }
-
             
+
             /**
             * getCampaignDispositions returns the dispositions for the current call campaign
             * 
@@ -105,6 +105,59 @@
 
                 });
             }
+
+
+            /**
+            * getInboundCampaigns returns an array of inbound campaigns that could recieve a call
+            * 
+            * Five9 VCC Agent API Method:
+            *   GET /agents/{agentId}/campaigns
+            */
+            function getInboundCampaigns(campaignId){
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/campaigns/";
+                console.log(endpointURL);
+                let campaignList = undefined;
+                let campaigns = {};
+
+
+                return $.get( endpointURL, function(campaignListResponse){
+                    console.log("Inbound Campaigns:");
+                    console.log(campaignListResponse);
+                    let campaigns = {}
+                    campaignListResponse.forEach((campaign) => {
+                        campaigns[campaign.name] = campaign.id;
+                    });
+                    console.log("Campaigns Mapped by Name")
+                    console.log(campaigns)
+                    f9InboundCampaigns = campaigns;
+                });
+            }
+
+                        
+        /**
+        * getDomainSpeedDials returns an array of speed dial information.
+        * 
+        * Five9 VCC Agent API Method:
+        *   GET /orgs/{orgId}/speed_dials
+        */
+        function getDomainSpeedDials(campaignId){
+            let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/speed_dials/"
+            console.log(endpointURL);
+            let speedDials = {};
+
+            return $.get( endpointURL, function(speedDialInfo){
+                console.log("Inbound Campaigns:");
+                console.log(speedDialInfo);
+                let speedDials = {}
+                speedDialInfo.forEach((speedDial) => {
+                    speedDials[speedDial.description] = speedDial.id;
+                });
+                console.log("Speed Dials Mapped by Name")
+                console.log(speedDials)
+                f9SpeedDials = speedDials;
+            });
+        }
+
 
             /**
             * dispose Finishes a call and sets a disposition.  
@@ -169,7 +222,6 @@
             *   
             */
             function initiateTransferToExternal(callId="", dnis, dispositionId="-23", dispositionTimeout=300000, timeout=0, warm=true, skipDNCCheck=false){
-                let activeCalls = getCurrentCalls();
 
                 let externalTransferDestinationInfo = JSON.stringify({
                     "destination": {
@@ -198,6 +250,75 @@
                 });	
             }
 
+
+        /**
+        * initiateTransferToSpeedDial transfers the call to an speed dial number.  Set warm=true for a warm transfer (1st party on hold). 
+        * 
+        * Five9 VCC Agent API Method:
+        *   PUT /agents/{agentId}/interactions/calls/{callId}/transfer_to_speed_dial
+        * 
+        * Five9 Response Sample:
+        *   
+        */
+        function initiateTransferToSpeedDial(callId="", speedDialDescription, dispositionId="-23", dispositionTimeout=300000, timeout=0, warm=true, skipDNCCheck=false){
+            let speedDialId = f9SpeedDials[speedDialDescription]
+            let speedDialTransferDestinationInfo = JSON.stringify({
+                "destination": {
+                    "skipDNCCheck": skipDNCCheck,
+                    "checkMultipleContacts": true,
+                    "speedDialId": speedDialId, 
+                },
+                "dispositionId": dispositionId,
+                "warm": warm, 
+            });
+
+            let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/transfer_to_speed_dial";
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: 'PUT',
+                data: speedDialTransferDestinationInfo,
+                contentType: "application/json",
+                success: function(res) {
+                    console.log("Speed Dial Transfer Response")
+                    console.log(res);
+                }
+            });	
+        }
+
+
+            /**
+            * initiateTransferToCampaign transfers the call to a campaign.  Set warm=true for a warm transfer (1st party on hold). 
+            * 
+            * Five9 VCC Agent API Method:
+            *   PUT /agents/{agentId}/interactions/calls/{callId}/transfer_to_campaign
+            * 
+            * Five9 Response Sample:
+            *   
+            */
+            function initiateTransferToCampaign(callId="", campaignId, warm=true){
+                let CampaignTransferDestinationInfo = JSON.stringify({
+                    "campaignId": targetCampaignId,
+                    "warm": warm, 
+                });
+
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/transfer_to_campaign";
+                console.log(endpointURL);
+
+                return $.ajax({
+                    url: endpointURL,
+                    type: 'PUT',
+                    data: CampaignTransferDestinationInfo,
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("Campaign Transfer Response")
+                        console.log(res);
+                    }
+                });	
+            }
+
+
             function leaveConference(callId, disposition){
                 
                 let leaveConferenceInfo = JSON.stringify({
@@ -220,7 +341,6 @@
                 });	
             }         
 
-            
 
             function getSessionMetadata(){
                 return $.get(freedomMetadataURL, function( data ) {
@@ -293,9 +413,17 @@
                     console.info('Session Metadata:', sessionMetaData);
                     $(".leave-conference").hide();
                     $(".disconnect-conference-participants").hide();
+
+                    $.when(getInboundCampaigns()).then(function(inboundCampaigns){
+                        console.log("Campaigns loaded")
+                    })
+
+                    $.when(getDomainSpeedDials()).then(function(speedDialInfo){
+                        console.log("Speed Dials loaded")
+                    })
+
                     const socket = new window.WebSocket(base_websocket_api_url);
                     let pingIntervalHandle = null;                    
-
                     socket.onopen = function () {
                         // Socket has to be kept alive with one ping every 15 seconds
                         pingIntervalHandle = window.setInterval(function() {
@@ -329,17 +457,24 @@
 
                     let dispositions;
                     $(".trigger-transfer").click(function(){
-                        let destination = $(this).attr("destination");
+                        let destination = $(this).attr("destination").split(":");
+                        
                         $.when(getCurrentCalls()).then(function(calls){
                             console.log("destination: " + destination);
-                            initiateTransferToExternal(callId=calls[0].id,dnis=destination);
-                            console.log(conferenceParticipant);
+                            if(destination[0] == "campaign"){
+                                initiateTransferToCampaign(callId=calls[0].id, targetCampaignId=f9InboundCampaigns[destination[1]]);
+                            }
+                            
+                            if(destination[0] == "external"){
+                                initiateTransferToExternal(callId=calls[0].id, dnis=destination[1]);
+                            }
+
+                            if(destination[0] == "speed"){
+                                initiateTransferToSpeedDial(callId=calls[0].id, speedDialDescription=destination[1]);
+                            }
+                            // console.log(conferenceParticipant);
                         })
-                    })
-
-
-                    
-                   
+                    })                   
                 });
             });
         </script>
