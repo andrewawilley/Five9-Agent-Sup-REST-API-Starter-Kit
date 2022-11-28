@@ -63,6 +63,7 @@
 
             let f9CurrentCalls;
             let f9CurrentCallId;
+            let f9CAVs = {};
 
 
             /**
@@ -106,11 +107,11 @@
                     console.log(res);
                     cavsList = res;
                     cavsList.forEach((cav) => {
-                        cavs[cav.group] = cavs[cav.group] || {};
-                        cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
-                        cavs[cav.group][cav.name]["id"] = cav.id;
-                        cavs[cav.group][cav.name]["type"] = cav.type;
-                        cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
+                        f9CAVs[cav.group] = f9CAVs[cav.group] || {};
+                        f9CAVs[cav.group][cav.name] = f9CAVs[cav.group][cav.name] || {};
+                        f9CAVs[cav.group][cav.name]["id"] = cav.id;
+                        f9CAVs[cav.group][cav.name]["type"] = cav.type;
+                        f9CAVs[cav.group][cav.name]["restrictions"] = cav.restrictions;
                     });
                     console.log("Domain CAVs after transformation:");
                     console.log(cavs);
