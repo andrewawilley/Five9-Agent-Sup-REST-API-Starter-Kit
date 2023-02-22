@@ -64,9 +64,10 @@
         let f9OrgId;
         let f9UserId;
 
-        let f9CurrentCallId;
+        let f9currentCall;
+        let f9currentCallId;
 
-        let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
+        let f9domainContactFieldIdsByFieldName = {};
         let DOMAIN_CAVs = {};
 
         /**
@@ -208,6 +209,8 @@
                 console.log("Returned calls:");
                 console.log(res);
                 calls = res;
+                f9currentCall = calls[0];
+
             });
         }
 
@@ -288,6 +291,9 @@
                 console.log("Returned domain contact fields:");
                 console.log(res);
                 domainContactFields = res;
+                for(const fieldId in domainContactFields){
+                    f9domainContactFieldIdsByFieldName[domainContactFields[fieldId].name] = domainContactFields[fieldId]
+                }
             });
         }
 
@@ -338,6 +344,7 @@
             });
         }
 
+
         /**
          * Updates contact info.  Accepts an array of fieldId and Values to update on the record.
          *
@@ -350,32 +357,34 @@
          */
         function updateContactInfoByFieldName(contact, fieldUpdates) {
             // Process Field Updates
+            $.when(getContactFields()).then(function() {
+                for (const [key, value] of Object.entries(fieldUpdates)) {
+                    console.log("Updating " + key + ": " + value + "(Field ID " + fieldId);
+                    fieldId = f9domainContactFieldIdsByFieldName[key];
+                    contact.fields[fieldId] = value;
+                }
+                console.log(contact.modificationTime);
+                let contactInfo = JSON.stringify(contact);
+                console.log(contactInfo);
 
-            for (const [key, value] of Object.entries(fieldUpdates)) {
-                fieldId = f9domainContactFieldIdsByFieldName[key];
-                contact.fields[fieldId] = value;
-                console.log("Updating " + key + ": " + value + "(Field ID " + fieldId);
-            }
-            console.log(contact.modificationTime);
-            let contactInfo = JSON.stringify(contact);
-            console.log(contactInfo);
+                let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/contacts/${contact.id}`;
+                console.log(endpointURL);
+                let contactUpdated = 0;
 
-            let endpointURL = `${base_agents_api_url}/orgs/${f9OrgId}/contacts/${contact.id}`;
-            console.log(endpointURL);
-            let contactUpdated = 0;
-
-            return $.ajax({
-                url: endpointURL,
-                type: "PUT",
-                data: contactInfo,
-                contentType: "application/json",
-                success: function (res) {
-                    console.log("ActiveContact Response");
-                    console.log(res);
-                    contactUpdated = 1;
-                },
-            });
-            // return contactUpdated;
+                return $.ajax({
+                    url: endpointURL,
+                    type: "PUT",
+                    data: contactInfo,
+                    contentType: "application/json",
+                    success: function (res) {
+                        console.log("ActiveContact Response");
+                        console.log(res);
+                        contactUpdated = 1;
+                    },
+                });
+                // return contactUpdated;
+                
+            })
         }
 
         /**
@@ -927,7 +936,7 @@
                         f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
                             "Unhandled Socket Event",
                             function (eventData) {
-                                console.log(this.eventName, eventData.context.eventReason)
+                                // console.log(this.eventName, eventData.context.eventReason)
                             });
                     }
                     console.log(eventData);

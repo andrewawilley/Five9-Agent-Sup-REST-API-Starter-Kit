@@ -100,7 +100,6 @@
                 let endpointURL = base_agents_api_url+"/orgs/"+f9OrgId+"/call_variables";
                 console.log(endpointURL);
                 let cavsList = undefined;
-                let cavs = {};
 
                 return $.get( endpointURL, function(res){
                     console.log("Domain CAVs:");
@@ -114,7 +113,7 @@
                         f9CAVs[cav.group][cav.name]["restrictions"] = cav.restrictions;
                     });
                     console.log("Domain CAVs after transformation:");
-                    console.log(cavs);
+                    console.log(f9CAVs);
                 });
             }
 
@@ -251,11 +250,31 @@
                     // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
                     // let playPromptStateTrigger = ["TALKING"];
 
-                    // if(eventData.context.eventReason == "CONNECTED" && eventData.payLoad.state == "TALKING"){
-                    //     playPromptByName(promptPlayOnConnect)
-                    // }
-                
-                    }),
+
+                    f9CurrentCalls = eventData.payLoad;
+                    f9CurrentCallId = eventData.payLoad.id
+
+                    if(eventData.context.eventReason == "CONNECTED" && eventData.payLoad.state == "TALKING"){
+                        $.when(getDomainCallVariables()).then(function(cavs){
+                            // populate the cavsToUpdate variable with the ID of the target CAV
+                            // and the desired new value.
+                            //
+                            // For example, if there is a domain variable group called "debug"
+                            // and a variable in that group called "test", obtain the
+                            // ID of that CAV from the f9CAVs script variable that is set by the
+                            // getDomainCallVariables method:
+                            //     f9CAVs.debug.test.id
+                            //
+                            // If for example a truncated version of the Five9 agent username needs
+                            // to be stored in the debug.test variable:
+                            cavsToUpdate = {}
+                            cavsToUpdate[f9CAVs.debug.test.id] = "this is a test";
+                            $.when(updateCallVariableValues(cavsToUpdate)).then(function(response){
+                                // optionally do more after the variable has been updated
+                            });
+                        })
+                    }
+                }),
                 "5": new f9socketEvent("EVENT_CALL_DELETED", function(eventData){
                     console.log(this.eventName, eventData.context.eventReason);
                     console.log(eventData);
@@ -294,7 +313,7 @@
                     }
                 });
 
-                window.parent.$('span:contains("Interaction")').click();
+                window.parent.$('span:contains("Worksheet")').click();
         
                 // first obtain session metadata, and once that is complete, open a socket
                 $.when(getSessionMetadata()).then(function(sessionMetaData){
@@ -306,25 +325,6 @@
                         $.when(getCurrentCalls()).then(function(currentCalls){
                             f9CurrentCalls = currentCalls;
                             f9CurrentCallId = f9CurrentCalls[0].id
-
-                            $.when(getDomainCallVariables()).then(function(cavs){
-                                // populate the cavsToUpdate variable with the ID of the target CAV
-                                // and the desired new value.
-                                //
-                                // For example, if there is a domain variable group called "debug"
-                                // and a variable in that group called "test", obtain the
-                                // ID of that CAV from the f9CAVs script variable that is set by the
-                                // getDomainCallVariables method:
-                                //     f9CAVs.debug.test.id
-                                //
-                                // If for example a truncated version of the Five9 agent username needs
-                                // to be stored in the debug.test variable:
-                                cavsToUpdate = {}
-                                cavsToUpdate[f9CAVs.debug.test.id] = "@Agent.user_name@".split("@")[0];
-                                $.when(updateCallVariableValues(cavsToUpdate)).then(function(response){
-                                    // optionally do more after the variable has been updated
-                                });
-                            })
                          })
                     }
 
