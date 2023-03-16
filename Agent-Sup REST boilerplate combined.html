@@ -18,7 +18,8 @@
             <div class="col-md-3 col-lg-2"></div>
             <div class="col-md-9 col-lg-10">
                 <h1>Note</h1>
-                <p>See browser inspector for details.  Must be signed in as an agent for this to work.  Supervisor functionality only works if user also has supervisor roles/permissions</p>
+                <p>See browser inspector for details. Must be signed in as an agent for this to work. Supervisor
+                    functionality only works if user also has supervisor roles/permissions</p>
             </div>
         </div>
     </main>
@@ -72,40 +73,57 @@
                 }
             }
 
-            async connectSocket(endpointUrl, f9socketEventHandlers){
 
+            /**
+             * Connect to a WebSocket endpoint and process events using provided event handlers.
+             *
+             * @param {string} endpointUrl - The URL of the WebSocket endpoint to connect to.
+             * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
+             */
+            async connectSocket(endpointUrl, f9socketEventHandlers) {
+                // Get the current supervisor state
                 const currentSupervisorState = await this.getSupervisorLoginState();
 
                 // Start a new supervisor session if not in the "WORKING" state
                 if (currentSupervisorState != "WORKING") {
                     await this.supervisorSessionStart();
                 }
-                
+
+                // Create a new WebSocket instance with the provided endpoint URL
                 const f9Socket = new window.WebSocket(endpointUrl);
                 let pingIntervalHandle = null;
+
+                // Set up the 'onopen' event handler for the WebSocket
                 f9Socket.onopen = function () {
+                    // Keep the socket connection alive by sending a 'ping' message every 15 seconds
                     pingIntervalHandle = window.setInterval(function () {
                         f9Socket.send("ping");
                     }, 15000);
                     console.info("Websocket Opened");
                 };
 
-                // attach a callback function to the "message" events on the socket
+                // Attach a callback function to the "message" events on the socket
                 f9Socket.addEventListener("message", function (event) {
+                    // Parse the event data received from the WebSocket message
                     const eventData = JSON.parse(event.data);
-                    if(window.location.search.indexOf("verbose=true") > -1){
+
+                    // Log the event data if the "verbose=true" query parameter is present
+                    if (window.location.search.indexOf("verbose=true") > -1) {
                         console.log(eventData.context.eventId + ": " + eventData.context.eventReason)
                         console.log(eventData);
                     }
 
-                    
+                    // Retrieve the event handler for the specific event ID
                     let eventHandler = f9socketEventHandlers[eventData.context.eventId];
                     if (eventHandler) {
+                        // Call the event handler with the event data
                         eventHandler.handle(eventData);
                     } else {
-                        console.log(`Unhandled Socket Event Registered: 
-                        ${eventData.context.eventId}
-                        ${JSON.stringify(eventData.payLoad)}`)
+                        // Register a new 'Unhandled Socket Event' handler if no handler exists for the event ID
+                        console.log(`
+Unhandled Socket Event Registered: 
+    ${eventData.context.eventId}
+    ${JSON.stringify(eventData.payLoad)}`)
                         f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
                             "Unhandled Socket Event",
                             function (eventData) {
@@ -115,19 +133,22 @@
                     // console.log(eventData);
                 });
 
+                // Set up the 'onclose' event handler for the WebSocket
                 f9Socket.onclose = function () {
+                    // Clear the ping interval when the WebSocket connection is closed
                     window.clearInterval(pingIntervalHandle);
                 };
 
+                // Add an event listener for the 'unload' event to close the WebSocket connection when the page is unloaded
                 window.addEventListener("unload", function () {
                     f9Socket.close();
                 });
+                return f9Socket;
             }
 
-
-            async connectAgentWebsocket(){                
+            async connectAgentWebsocket() {
                 let f9SocketEventHandlersAgent = {
-                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData){
+                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData) {
                         // console.log("presenceupdate");
                     }),
                     4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
@@ -147,12 +168,12 @@
                         console.log(eventData);
                     }),
                 };
-                this.connectSocket(this.base_websocket_api_url_agent, f9SocketEventHandlersAgent)
+                return this.connectSocket(this.base_websocket_api_url_agent, f9SocketEventHandlersAgent)
             }
 
-            async connectSupervisorWebsocket(){                
+            async connectSupervisorWebsocket() {
                 let f9SocketEventHandlersSupervisor = {
-                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData){
+                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData) {
                         // console.log("presenceupdate");
                     }),
                     4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
@@ -172,7 +193,7 @@
                         console.log(eventData);
                     }),
                 };
-                this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
+                return this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
             }
 
 
@@ -530,8 +551,8 @@
                 // session.getDomainCallVariables();
                 // session.getCampaignProfiles();
                 // session.getAgentStates();
-                session.connectAgentWebsocket();
-                session.connectSupervisorWebsocket();
+                let agentWebSocket = session.connectAgentWebsocket();
+                let superWebSocket = session.connectSupervisorWebsocket();
             } else {
                 console.log("can't do the cool stuff")
             }
