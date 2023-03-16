@@ -29,6 +29,14 @@
         </script>
 
     <script type="text/javascript">
+
+        class f9socketEvent {
+            constructor(eventName, handler) {
+                this.eventName = eventName;
+                this.handle = handler;
+            }
+        }
+
         /**
          * The constructor function for the Five9Session class.
          *
@@ -51,8 +59,8 @@
                     agent_rest: "/appsvcs/rs/svc",
                     agent_str: "/strsvcs/rs/svc",
                     sup_rest: "/supsvcs/rs/svc",
-                    websocket: `/appsvcs/ws/${this.randomSocketKey}`,
-                    supervisor_websocket: `/supsvcs/ws/${this.randomSocketKey}`,
+                    websocket_agent: `/appsvcs/ws/${this.randomSocketKey}_agent`,
+                    websocket_super: `/supsvcs/sws/${this.randomSocketKey}_super`,
                 };
 
                 // Set the default XHR options
@@ -63,6 +71,110 @@
                     },
                 }
             }
+
+            async connectSocket(endpointUrl, f9socketEventHandlers){
+
+                const currentSupervisorState = await this.getSupervisorLoginState();
+
+                // Start a new supervisor session if not in the "WORKING" state
+                if (currentSupervisorState != "WORKING") {
+                    await this.supervisorSessionStart();
+                }
+                
+                const f9Socket = new window.WebSocket(endpointUrl);
+                let pingIntervalHandle = null;
+                f9Socket.onopen = function () {
+                    pingIntervalHandle = window.setInterval(function () {
+                        f9Socket.send("ping");
+                    }, 15000);
+                    console.info("Websocket Opened");
+                };
+
+                // attach a callback function to the "message" events on the socket
+                f9Socket.addEventListener("message", function (event) {
+                    const eventData = JSON.parse(event.data);
+                    if(window.location.search.indexOf("verbose=true") > -1){
+                        console.log(eventData.context.eventId + ": " + eventData.context.eventReason)
+                        console.log(eventData);
+                    }
+
+                    
+                    let eventHandler = f9socketEventHandlers[eventData.context.eventId];
+                    if (eventHandler) {
+                        eventHandler.handle(eventData);
+                    } else {
+                        console.log(`Unhandled Socket Event Registered: 
+                        ${eventData.context.eventId}
+                        ${JSON.stringify(eventData.payLoad)}`)
+                        f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
+                            "Unhandled Socket Event",
+                            function (eventData) {
+                                // console.log(this.eventName, eventData.context.eventReason)
+                            });
+                    }
+                    // console.log(eventData);
+                });
+
+                f9Socket.onclose = function () {
+                    window.clearInterval(pingIntervalHandle);
+                };
+
+                window.addEventListener("unload", function () {
+                    f9Socket.close();
+                });
+            }
+
+
+            async connectAgentWebsocket(){                
+                let f9SocketEventHandlersAgent = {
+                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData){
+                        // console.log("presenceupdate");
+                    }),
+                    4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
+                        console.log(this.eventName, eventData.context.eventReason);
+                        console.log(eventData);
+
+                        // EXAMPLE use events to stop/start recording for all calls
+                        // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
+                        // let stopRecordingStates = ["TALKING"];
+                        // if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state)){
+                        //    // do something here    
+                        // }
+                    }),
+
+                    5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
+                        console.log(this.eventName, eventData.context.eventReason);
+                        console.log(eventData);
+                    }),
+                };
+                this.connectSocket(this.base_websocket_api_url_agent, f9SocketEventHandlersAgent)
+            }
+
+            async connectSupervisorWebsocket(){                
+                let f9SocketEventHandlersSupervisor = {
+                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData){
+                        // console.log("presenceupdate");
+                    }),
+                    4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
+                        console.log(this.eventName, eventData.context.eventReason);
+                        console.log(eventData);
+
+                        // EXAMPLE use events to stop/start recording for all calls
+                        // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
+                        // let stopRecordingStates = ["TALKING"];
+                        // if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state)){
+                        //    // do something here    
+                        // }
+                    }),
+
+                    5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
+                        console.log(this.eventName, eventData.context.eventReason);
+                        console.log(eventData);
+                    }),
+                };
+                this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
+            }
+
 
             /**
              * A generic asynchronous method for making API requests to the agent and supervisor REST API.
@@ -134,7 +246,7 @@
                 }
             }
 
-            
+
             /**
              * Fetch session metadata and initialize the instance properties.
              *
@@ -170,8 +282,8 @@
                     this.base_api_url_agents = `${this.base_api_url}${this.contextPaths.agent_rest}`;
                     this.base_api_url_sprvsr = this.base_api_url + this.contextPaths.sup_rest;
 
-                    this.base_websocket_api_url_agents = this.base_ws_url + this.contextPaths.websocket;
-                    this.base_websocket_api_url_sprvsr = this.base_ws_url + this.contextPaths.supervisor_websocket;
+                    this.base_websocket_api_url_agent = this.base_ws_url + this.contextPaths.websocket_agent;
+                    this.base_websocket_api_url_supervisor = this.base_ws_url + this.contextPaths.websocket_super;
 
                     // Log the successful acquisition of metadata
                     console.log("Metadata successfully acquired");
@@ -418,6 +530,8 @@
                 // session.getDomainCallVariables();
                 // session.getCampaignProfiles();
                 // session.getAgentStates();
+                session.connectAgentWebsocket();
+                session.connectSupervisorWebsocket();
             } else {
                 console.log("can't do the cool stuff")
             }
