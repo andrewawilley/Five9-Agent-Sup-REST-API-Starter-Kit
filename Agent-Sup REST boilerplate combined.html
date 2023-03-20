@@ -81,14 +81,6 @@
              * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
              */
             async connectSocket(endpointUrl, f9socketEventHandlers) {
-                // Get the current supervisor state
-                const currentSupervisorState = await this.getSupervisorLoginState();
-
-                // Start a new supervisor session if not in the "WORKING" state
-                if (currentSupervisorState != "WORKING") {
-                    await this.supervisorSessionStart();
-                }
-
                 // Create a new WebSocket instance with the provided endpoint URL
                 const f9Socket = new window.WebSocket(endpointUrl);
                 let pingIntervalHandle = null;
@@ -172,25 +164,18 @@ Unhandled Socket Event Registered:
             }
 
             async connectSupervisorWebsocket() {
+                // Get the current supervisor state
+                const currentSupervisorState = await this.getSupervisorLoginState();
+
+                // Start a new supervisor session if not in the "WORKING" state
+                if (currentSupervisorState != "WORKING") {
+                    await this.supervisorSessionStart();
+                }
+
+                // Define event handlers for supervisor socket events here:
                 let f9SocketEventHandlersSupervisor = {
-                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData) {
-                        // console.log("presenceupdate");
-                    }),
-                    4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
-                        console.log(this.eventName, eventData.context.eventReason);
-                        console.log(eventData);
-
-                        // EXAMPLE use events to stop/start recording for all calls
-                        // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
-                        // let stopRecordingStates = ["TALKING"];
-                        // if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state)){
-                        //    // do something here    
-                        // }
-                    }),
-
-                    5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
-                        console.log(this.eventName, eventData.context.eventReason);
-                        console.log(eventData);
+                    5000: new f9socketEvent("EVENT_STATS", function (eventData) {
+                        // console.log("Statistics data has been received.");
                     }),
                 };
                 return this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
@@ -371,7 +356,6 @@ Unhandled Socket Event Registered:
                     return null;
                 }
             }
-
 
 
             /**
