@@ -112,10 +112,7 @@
                         eventHandler.handle(eventData);
                     } else {
                         // Register a new 'Unhandled Socket Event' handler if no handler exists for the event ID
-                        console.log(`
-Unhandled Socket Event Registered: 
-    ${eventData.context.eventId}
-    ${JSON.stringify(eventData.payLoad)}`)
+                        console.log(`Unhandled Socket Event Registered:\n\t${eventData.context.eventId}\n\t${JSON.stringify(eventData.payLoad)}`)
                         f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
                             "Unhandled Socket Event",
                             function (eventData) {
