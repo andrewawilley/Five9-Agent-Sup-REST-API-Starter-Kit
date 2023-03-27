@@ -373,17 +373,17 @@
                     "stationId": "",
                     "stationType": "EMPTY"
                 };
-
+                let payloadData = JSON.stringify(supervisorSessionParams);
                 try {
                     // Call the f9APiMethod with bypassSupervisorCheck set to true
-                    const data = await this.f9APiMethod(endpointURL, "PUT", payload = supervisorSessionParams, bypassSupervisorCheck = true);
+                    const supervisorSessionData = await this.f9APiMethod(endpointURL, "PUT", payload=payloadData, bypassSupervisorCheck=true);
 
                     // Log the supervisor session information
                     console.log("Supervisor Login State");
-                    console.log(data);
+                    console.log(supervisorSessionData);
 
                     // Return the supervisor session information
-                    return data;
+                    return supervisorSessionData;
                 } catch (error) {
                     // Log the error and return null
                     console.error(error);
