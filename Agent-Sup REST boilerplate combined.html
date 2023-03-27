@@ -173,7 +173,10 @@
                 // Define event handlers for supervisor socket events here:
                 let f9SocketEventHandlersSupervisor = {
                     5000: new f9socketEvent("EVENT_STATS", function (eventData) {
-                        // console.log("Statistics data has been received.");
+                        console.log("Initial statistics data has been received.");
+                    }),
+                    5012: new f9socketEvent("EVENT_INCREMENTAL_STATS_UPDATE", function (eventData) {
+                        console.log("Statistics incremental update has been received.");
                     }),
                 };
                 return this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
@@ -194,12 +197,15 @@
              * @throws {Error} If the response is not ok.
              */
             async f9ApiMethod(endpointURL, method, endpointOptions = undefined, payload = undefined, bypassSupervisorCheck = false) {
-                // log all the method parameters for debugging to the console
-                console.log("f9APiMethod Parameters:")
-                console.log(`\tendpointURL: ${endpointURL}`)
-                console.log(`\tmethod: ${method}`)
-                console.log(`\tendpointOptions: ${JSON.stringify(endpointOptions)}`)
-                console.log(`\tbyPassSupervisorCheck: ${bypassSupervisorCheck}`)
+                // log all the method parameters for debugging to the console if the "verbose=true" query parameter is present
+                if (window.location.search.indexOf("verbose=true") > -1) {
+                    console.log("f9ApiMethod Parameters:")
+                    console.log(`\tendpointURL: ${endpointURL}`)
+                    console.log(`\tmethod: ${method}`)
+                    console.log(`\tendpointOptions: ${JSON.stringify(endpointOptions)}`)
+                    console.log(`\tbyPassSupervisorCheck: ${bypassSupervisorCheck}`)
+                }
+
 
                 // Check if the request is for the supervisor REST API and if the check should not be bypassed
                 if (bypassSupervisorCheck === false && endpointURL.indexOf(this.contextPaths.sup_rest) > -1) {
@@ -386,7 +392,7 @@
 
                 try {
                     console.log(`endpointUrl is ${endpointURL}`)
-                    
+
                     // Create a copy of the default XHR options and set the request method to PUT
                     let endpointOptions = this.defaultXhrOptions;
                     endpointOptions.method = "PUT";
@@ -548,12 +554,11 @@
             const session = new Five9Session();
             const metadataObtained = await session.getSessionMetadata();
             if (metadataObtained === true) {
-                //session.getDomainCallVariables();
-                //session.getAgentStates();
-                //let agentWebSocket = session.connectAgentWebsocket();
-                //let superWebSocket = session.connectSupervisorWebsocket();
+                // start an agent websocket
+                let agentWebSocket = session.connectAgentWebsocket();
 
-                
+                // start a supervisor websocket, wait to do other supervisor stuff until it's connected
+                let superWebSocket = await session.connectSupervisorWebsocket();
                 session.getCampaignProfiles();
 
             } else {
