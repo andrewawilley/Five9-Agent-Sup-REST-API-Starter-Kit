@@ -166,13 +166,17 @@
 
                 // Start a new supervisor session if not in the "WORKING" state
                 if (currentSupervisorState != "WORKING") {
+                    console.log("Starting a new supervisor session...")
                     await this.supervisorSessionStart();
                 }
 
                 // Define event handlers for supervisor socket events here:
                 let f9SocketEventHandlersSupervisor = {
                     5000: new f9socketEvent("EVENT_STATS", function (eventData) {
-                        // console.log("Statistics data has been received.");
+                        console.log("Initial statistics data has been received.");
+                    }),
+                    5012: new f9socketEvent("EVENT_INCREMENTAL_STATS_UPDATE", function (eventData) {
+                        console.log("Statistics incremental update has been received.");
                     }),
                 };
                 return this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
@@ -192,14 +196,26 @@
              * @returns {Promise<Object|null>} Returns a Promise that resolves to the JSON response object or null if there was an error.
              * @throws {Error} If the response is not ok.
              */
-            async f9APiMethod(endpointURL, method, endpointOptions = undefined, payload = undefined, bypassSupervisorCheck = false) {
+            async f9ApiMethod(endpointURL, method, endpointOptions = undefined, payload = undefined, bypassSupervisorCheck = false) {
+                // log all the method parameters for debugging to the console if the "verbose=true" query parameter is present
+                if (window.location.search.indexOf("verbose=true") > -1) {
+                    console.log("f9ApiMethod Parameters:")
+                    console.log(`\tendpointURL: ${endpointURL}`)
+                    console.log(`\tmethod: ${method}`)
+                    console.log(`\tendpointOptions: ${JSON.stringify(endpointOptions)}`)
+                    console.log(`\tbyPassSupervisorCheck: ${bypassSupervisorCheck}`)
+                }
+
+
                 // Check if the request is for the supervisor REST API and if the check should not be bypassed
-                if (!bypassSupervisorCheck && endpointURL.indexOf(this.contextPaths.sup_rest > -1)) {
+                if (bypassSupervisorCheck === false && endpointURL.indexOf(this.contextPaths.sup_rest) > -1) {
                     // Get the current supervisor login state
+                    console.log("Checking supervisor login state...")
                     const currentSupervisorState = await this.getSupervisorLoginState();
 
                     // Start a new supervisor session if not in the "WORKING" state
                     if (currentSupervisorState != "WORKING") {
+                        console.log("Starting a new supervisor session...")
                         await this.supervisorSessionStart();
                     }
                 }
@@ -375,15 +391,23 @@
                 };
 
                 try {
-                    // Call the f9APiMethod with bypassSupervisorCheck set to true
-                    const data = await this.f9APiMethod(endpointURL, "PUT", payload = supervisorSessionParams, bypassSupervisorCheck = true);
+                    console.log(`endpointUrl is ${endpointURL}`)
+
+                    // Create a copy of the default XHR options and set the request method to PUT
+                    let endpointOptions = this.defaultXhrOptions;
+                    endpointOptions.method = "PUT";
+                    endpointOptions.body = JSON.stringify(supervisorSessionParams);
+
+                    // Make the request and wait for the response
+                    const supervisorSessionDataResponse = await fetch(endpointURL, endpointOptions);
+                    const supervisorSessionData = await supervisorSessionDataResponse.json();
 
                     // Log the supervisor session information
                     console.log("Supervisor Login State");
-                    console.log(data);
+                    console.log(supervisorSessionData);
 
                     // Return the supervisor session information
-                    return data;
+                    return supervisorSessionData;
                 } catch (error) {
                     // Log the error and return null
                     console.error(error);
@@ -417,7 +441,7 @@
                 const endpointURL = `${this.base_api_url_sprvsr}/orgs/${this.f9OrgId}/campaign_profiles`;
 
                 // Call the f9APiMethod with the endpoint URL and the GET method
-                return this.f9APiMethod(endpointURL, "GET");
+                return this.f9ApiMethod(endpointURL, "GET");
             }
 
 
@@ -455,7 +479,7 @@
 
                 try {
                     // Call the f9APiMethod with the endpoint URL and the GET method
-                    const agentStates = await this.f9APiMethod(endpointURL, "GET");
+                    const agentStates = await this.f9ApiMethod(endpointURL, "GET");
 
                     // Map the agent states to the userId objects using the agentStatesMap
                     const mappedAgentStates = Object.fromEntries(
@@ -493,7 +517,8 @@
                 let endpointURL = `${this.base_api_url_agents}/orgs/${this.f9OrgId}/call_variables`;
 
                 // Fetch the domain call attached variables using the f9APiMethod
-                let domainCavs = await this.f9APiMethod(endpointURL, "GET");
+                console.log("about to call f9APiMethod")
+                let domainCavs = await this.f9ApiMethod(endpointURL, "GET");
 
                 // Initialize an empty object to store the organized call attached variables
                 let cavs = {};
@@ -529,11 +554,13 @@
             const session = new Five9Session();
             const metadataObtained = await session.getSessionMetadata();
             if (metadataObtained === true) {
-                // session.getDomainCallVariables();
-                // session.getCampaignProfiles();
-                // session.getAgentStates();
+                // start an agent websocket
                 let agentWebSocket = session.connectAgentWebsocket();
-                let superWebSocket = session.connectSupervisorWebsocket();
+
+                // start a supervisor websocket, wait to do other supervisor stuff until it's connected
+                let superWebSocket = await session.connectSupervisorWebsocket();
+                session.getCampaignProfiles();
+
             } else {
                 console.log("can't do the cool stuff")
             }
