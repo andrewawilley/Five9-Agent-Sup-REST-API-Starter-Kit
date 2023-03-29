@@ -33,11 +33,16 @@
 
     <script type="text/javascript">
 
-        // Change to a specific prompt that exists on your domain
-        let agentName = "@Agent.full_name@"
-        agentName = agentName.replace(/[^a-zA-Z0-9]/g, '')
-        let promptPlayOnConnect = `agentExtensionQueueMessage_${agentName}_@Agent.extension@`;
-        console.log(`************* ${promptPlayOnConnect}`)
+        // Change to a specific prompt that exists on your domain.
+        let promptPlayOnConnect = "QRL"
+        
+        // uncomment the call types you want to play the prompt on
+        let promptPlayOnCallTypes = [
+            "Manual",
+            //"Inbound",
+            //"Outbound",
+            //"Preview",
+        ]
 
 
         let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
@@ -209,8 +214,11 @@
                 // EXAMPLE use events to play a prompt when the call is Updated and TALKING
                 // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
                 let playPromptStateTrigger = ["TALKING"];
+                console.log("*******************The call type is: @Call.type_name@")
+                // check if "@Call.type_name@" is in the promptPlayOnCallTypes array
 
-                if (eventData.context.eventReason == "CONNECTED" && eventData.payLoad.state == "TALKING") {
+                
+                if (eventData.context.eventReason == "CONNECTED" && eventData.payLoad.state == "TALKING" && promptPlayOnCallTypes.indexOf("@Call.type_name@")>-1) {
                     playPromptByName(promptPlayOnConnect)
                 }
 
@@ -255,6 +263,9 @@
 
             // first obtain session metadata, and once that is complete, open a socket
             $.when(getSessionMetadata()).then(function (sessionMetaData) {
+                // click the Interaction tab to ensure the agent is in the Interaction view
+                window.parent.$('span:contains("Interaction")').click();
+
                 console.info('Session Metadata:', sessionMetaData);
                 const socket = new window.WebSocket(base_websocket_api_url);
                 let pingIntervalHandle = null;
@@ -264,7 +275,7 @@
                         f9CurrentCalls = currentCalls;
                         f9CurrentCallId = f9CurrentCalls[0].id
 
-                        if (currentCalls.length > 0 && f9CurrentCalls[0].state == "TALKING") {
+                        if (currentCalls.length > 0 && f9CurrentCalls[0].state == "TALKING" && promptPlayOnCallTypes.indexOf("@Call.type_name@")>-1) {                            
                             playPromptByName(promptPlayOnConnect);
                         }
                     })
