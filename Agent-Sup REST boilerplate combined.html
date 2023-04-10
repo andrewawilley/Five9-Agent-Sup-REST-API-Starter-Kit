@@ -404,7 +404,7 @@
           const data = await response.json();
 
           // Log the response data
-          console2.log(`Endpoint Response Body: ${data}`);
+          console2.log(`Endpoint Response Body:`);
           console2.log(data);
 
           // Return the response data
@@ -460,6 +460,10 @@
 
           // Log the successful acquisition of metadata
           console2.log("Metadata successfully acquired");
+          console2.log(`\torgId: ${this.f9OrgId}`);
+          console2.log(`\tuserId: ${this.f9UserId}`);
+          console2.log(`\ttokenId: ${this.f9TokenId}`);
+          
 
           // Return true to indicate successful metadata acquisition
           return true;
