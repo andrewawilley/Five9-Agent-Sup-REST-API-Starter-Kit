@@ -2,571 +2,723 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="description"
-        content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API" />
-    <meta name="author" content="andrew.willey@five9.com" />
-
-    <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous" />
+  <meta charset="utf-8" />
+  <meta name="description"
+    content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API" />
+  <meta name="author" content="andrew.willey@five9.com" />
+  <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.3.0"></script>
 </head>
 
-<body>
-    <main class="container">
-        <div class="row">
-            <div class="col-md-3 col-lg-2"></div>
-            <div class="col-md-9 col-lg-10">
-                <h1>Note</h1>
-                <p>See browser inspector for details. Must be signed in as an agent for this to work. Supervisor
-                    functionality only works if user also has supervisor roles/permissions</p>
-            </div>
-        </div>
-    </main>
+<body class="bg-gray-100">
+  <main class="container mx-auto">
+    <h1 class="text-3xl font-bold mb-4">Note</h1>
+    <p class="text-lg">
+      See browser inspector for details. Must be signed in as an agent for
+      this to work. Supervisor functionality only works if user also has
+      supervisor roles/permissions
+    </p>
+  </main>
 
+  <script type="text/javascript">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous">
-        </script>
+    // initialize logging variables
+    const defaultLoggingPrefix = "[*****]";
+    const allowedLoggingModes = ["warn", "log", "info", "debug"];
 
-    <script type="text/javascript">
+    class consoleLogger {
+      constructor(prefix = defaultLoggingPrefix) {
+        this.prefix = prefix;
 
-        class f9socketEvent {
-            constructor(eventName, handler) {
-                this.eventName = eventName;
-                this.handle = handler;
+        // for each mode in allowedLoggingModes, create a function
+        // that will log the message with the mode
+        allowedLoggingModes.forEach((mode) => {
+          this[mode] = (message) => {
+            const d = new Date();
+            const dOptions = {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false, // use 24-hour time format
+            };
+
+            // if the message is an object, stringify it
+            if (typeof message === "object") {
+              message = JSON.stringify(message, null, 2);
+              message = `\n${message}`
             }
-        }
-
-        /**
-         * The constructor function for the Five9Session class.
-         *
-         * @class
-         * @classdesc Represents a Five9 session with various helper methods for interacting with the Five9 API.
-         */
-        class Five9Session {
-            /**
-             * Creates a new Five9Session instance with default properties.
-             */
-            constructor() {
-                // Set the Freedom Metadata URL
-                this.freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
-
-                // Generate a random socket key
-                this.randomSocketKey = (Math.random() * 1000 + 1).toString().split('.')[0];
-
-                // Set the context paths for various API endpoints
-                this.contextPaths = {
-                    agent_rest: "/appsvcs/rs/svc",
-                    agent_str: "/strsvcs/rs/svc",
-                    sup_rest: "/supsvcs/rs/svc",
-                    websocket_agent: `/appsvcs/ws/${this.randomSocketKey}_agent`,
-                    websocket_super: `/supsvcs/sws/${this.randomSocketKey}_super`,
-                };
-
-                // Set the default XHR options
-                this.defaultXhrOptions = {
-                    credentials: "include",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            }
-
-
-            /**
-             * Connect to a WebSocket endpoint and process events using provided event handlers.
-             *
-             * @param {string} endpointUrl - The URL of the WebSocket endpoint to connect to.
-             * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
-             */
-            async connectSocket(endpointUrl, f9socketEventHandlers) {
-                // Create a new WebSocket instance with the provided endpoint URL
-                const f9Socket = new window.WebSocket(endpointUrl);
-                let pingIntervalHandle = null;
-
-                // Set up the 'onopen' event handler for the WebSocket
-                f9Socket.onopen = function () {
-                    // Keep the socket connection alive by sending a 'ping' message every 15 seconds
-                    pingIntervalHandle = window.setInterval(function () {
-                        f9Socket.send("ping");
-                    }, 15000);
-                    console.info("Websocket Opened");
-                };
-
-                // Attach a callback function to the "message" events on the socket
-                f9Socket.addEventListener("message", function (event) {
-                    // Parse the event data received from the WebSocket message
-                    const eventData = JSON.parse(event.data);
-
-                    // Log the event data if the "verbose=true" query parameter is present
-                    if (window.location.search.indexOf("verbose=true") > -1) {
-                        console.log(eventData.context.eventId + ": " + eventData.context.eventReason)
-                        console.log(eventData);
-                    }
-
-                    // Retrieve the event handler for the specific event ID
-                    let eventHandler = f9socketEventHandlers[eventData.context.eventId];
-                    if (eventHandler) {
-                        // Call the event handler with the event data
-                        eventHandler.handle(eventData);
-                    } else {
-                        // Register a new 'Unhandled Socket Event' handler if no handler exists for the event ID
-                        console.log(`Unhandled Socket Event Registered:\n\t${eventData.context.eventId}\n\t${JSON.stringify(eventData.payLoad)}`)
-                        f9socketEventHandlers[eventData.context.eventId] = new f9socketEvent(
-                            "Unhandled Socket Event",
-                            function (eventData) {
-                                // console.log(this.eventName, eventData.context.eventReason)
-                            });
-                    }
-                    // console.log(eventData);
-                });
-
-                // Set up the 'onclose' event handler for the WebSocket
-                f9Socket.onclose = function () {
-                    // Clear the ping interval when the WebSocket connection is closed
-                    window.clearInterval(pingIntervalHandle);
-                };
-
-                // Add an event listener for the 'unload' event to close the WebSocket connection when the page is unloaded
-                window.addEventListener("unload", function () {
-                    f9Socket.close();
-                });
-                return f9Socket;
-            }
-
-            async connectAgentWebsocket() {
-                let f9SocketEventHandlersAgent = {
-                    15: new f9socketEvent("EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE", function (eventData) {
-                        // console.log("presenceupdate");
-                    }),
-                    4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
-                        console.log(this.eventName, eventData.context.eventReason);
-                        console.log(eventData);
-
-                        // EXAMPLE use events to stop/start recording for all calls
-                        // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
-                        // let stopRecordingStates = ["TALKING"];
-                        // if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state)){
-                        //    // do something here    
-                        // }
-                    }),
-
-                    5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
-                        console.log(this.eventName, eventData.context.eventReason);
-                        console.log(eventData);
-                    }),
-                };
-                return this.connectSocket(this.base_websocket_api_url_agent, f9SocketEventHandlersAgent)
-            }
-
-            async connectSupervisorWebsocket() {
-                // Get the current supervisor state
-                const currentSupervisorState = await this.getSupervisorLoginState();
-
-                // Start a new supervisor session if not in the "WORKING" state
-                if (currentSupervisorState != "WORKING") {
-                    console.log("Starting a new supervisor session...")
-                    await this.supervisorSessionStart();
-                }
-
-                // Define event handlers for supervisor socket events here:
-                let f9SocketEventHandlersSupervisor = {
-                    5000: new f9socketEvent("EVENT_STATS", function (eventData) {
-                        console.log("Initial statistics data has been received.");
-                    }),
-                    5012: new f9socketEvent("EVENT_INCREMENTAL_STATS_UPDATE", function (eventData) {
-                        console.log("Statistics incremental update has been received.");
-                    }),
-                };
-                return this.connectSocket(this.base_websocket_api_url_supervisor, f9SocketEventHandlersSupervisor)
-            }
-
-
-            /**
-             * A generic asynchronous method for making API requests to the agent and supervisor REST API.
-             *
-             * @async
-             * @function
-             * @param {string} endpointURL - The URL of the API endpoint.
-             * @param {string} method - The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
-             * @param {Object} [endpointOptions] - Optional configuration object for the request, such as headers.
-             * @param {Object|string} [payload] - Optional request payload, if applicable.
-             * @param {bool} bypassSupervisorCheck - Optrional, bypass the supervisor check for supervisor methods that do not need a check.
-             * @returns {Promise<Object|null>} Returns a Promise that resolves to the JSON response object or null if there was an error.
-             * @throws {Error} If the response is not ok.
-             */
-            async f9ApiMethod(endpointURL, method, endpointOptions = undefined, payload = undefined, bypassSupervisorCheck = false) {
-                // log all the method parameters for debugging to the console if the "verbose=true" query parameter is present
-                if (window.location.search.indexOf("verbose=true") > -1) {
-                    console.log("f9ApiMethod Parameters:")
-                    console.log(`\tendpointURL: ${endpointURL}`)
-                    console.log(`\tmethod: ${method}`)
-                    console.log(`\tendpointOptions: ${JSON.stringify(endpointOptions)}`)
-                    console.log(`\tbyPassSupervisorCheck: ${bypassSupervisorCheck}`)
-                }
-
-
-                // Check if the request is for the supervisor REST API and if the check should not be bypassed
-                if (bypassSupervisorCheck === false && endpointURL.indexOf(this.contextPaths.sup_rest) > -1) {
-                    // Get the current supervisor login state
-                    console.log("Checking supervisor login state...")
-                    const currentSupervisorState = await this.getSupervisorLoginState();
-
-                    // Start a new supervisor session if not in the "WORKING" state
-                    if (currentSupervisorState != "WORKING") {
-                        console.log("Starting a new supervisor session...")
-                        await this.supervisorSessionStart();
-                    }
-                }
-
-                // Set default options if endpointOptions is not provided
-                if (!endpointOptions) {
-                    endpointOptions = this.defaultXhrOptions;
-                }
-
-                // Update the request method in endpointOptions
-                endpointOptions.method = method;
-
-                // Add the payload to the request options, if provided
-                if (payload) {
-                    endpointOptions.body = payload;
-                    // Convert the payload to a JSON string if it's an object and the Content-Type is "application/json"
-                    if (endpointOptions["Content-Type"] == "application/json" && typeof (payload) == 'object') {
-                        endpointOptions.body = JSON.stringify(endpointOptions.body);
-                    }
-                }
-
-                try {
-                    // Log the endpoint URL
-                    console.log(`Endpoint URL: ${endpointURL}`);
-
-                    // Make the request and wait for the response
-                    const response = await fetch(endpointURL, endpointOptions);
-
-                    // Throw an error if the response is not ok
-                    if (!response.ok) {
-                        throw new Error(`Error fetching ${endpointURL}`);
-                    }
-
-                    // Parse the response JSON
-                    const data = await response.json();
-
-                    // Log the response data
-                    console.log(`Endpoint Response Body: ${data}`);
-                    console.log(data);
-
-                    // Return the response data
-                    return data;
-                } catch (error) {
-                    // Log the error and return null
-                    console.error(error);
-                    return null;
-                }
-            }
-
-
-            /**
-             * Fetch session metadata and initialize the instance properties.
-             *
-             * This method should be the first thing called after initializing the Five9Session object.
-             * It fetches session metadata from the Five9 API, extracts the necessary data,
-             * and initializes the instance properties accordingly.
-             *
-             * @async
-             * @function
-             * @returns {Promise<boolean>} Returns a Promise that resolves to true if the metadata is successfully acquired, and false otherwise.
-             */
-            async getSessionMetadata() {
-                try {
-                    // Fetch the session metadata from the Five9 API
-                    const response = await fetch(this.freedomMetadataURL, { credentials: 'include' });
-                    if (!response.ok) {
-                        throw new Error('Error fetching session metadata');
-                    }
-
-                    // Parse the response as JSON
-                    const metadataResponse = await response.json();
-
-                    // Set instance properties using the fetched metadata
-                    this.f9OrgId = metadataResponse.orgId;
-                    this.f9UserId = metadataResponse.userId;
-                    this.f9TokenId = metadataResponse.tokenId
-
-                    const host = metadataResponse.metadata.dataCenters[0].apiUrls[0].host
-                    const port = metadataResponse.metadata.dataCenters[0].apiUrls[0].port
-                    this.base_api_url = `https://${host}:${port}`;
-                    this.base_ws_url = `wss://${host}:${port}`;
-
-                    this.base_api_url_agents = `${this.base_api_url}${this.contextPaths.agent_rest}`;
-                    this.base_api_url_sprvsr = this.base_api_url + this.contextPaths.sup_rest;
-
-                    this.base_websocket_api_url_agent = this.base_ws_url + this.contextPaths.websocket_agent;
-                    this.base_websocket_api_url_supervisor = this.base_ws_url + this.contextPaths.websocket_super;
-
-                    // Log the successful acquisition of metadata
-                    console.log("Metadata successfully acquired");
-
-                    // Return true to indicate successful metadata acquisition
-                    return true;
-
-                } catch (error) {
-                    // Log an error message and return false to indicate failure
-                    console.log("You must be logged into Five9 in another browser tab for this to work");
-                    return false;
-                }
-            }
-
-
-
-            /**
-             * Get the current login state of the supervisor.
-             *
-             * This method makes a request to the Five9 VCC Supervisor API to obtain the supervisor's login state.
-             *
-             * Five9 VCC Supervisor API Method:
-             *   GET /supervisors/{supervisorId}/login_state
-             *
-             * Five9 Response Sample:   
-             *     "WORKING"
-             *
-             * @async
-             * @function
-             * @returns {Promise<string|null>} Returns a Promise that resolves to the supervisor's login state or null if there was an error.
-             * @throws {Error} If the response is not ok.
-             */
-            async getSupervisorLoginState() {
-                // Construct the API endpoint URL
-                let endpointURL = `${this.base_api_url_sprvsr}/supervisors/${this.f9UserId}/login_state`;
-
-                // Log the endpoint URL
-                console.log(endpointURL);
-
-                // Create a copy of the default XHR options and set the request method to GET
-                let endpointOptions = { ...this.defaultXhrOptions, method: "GET" };
-
-                try {
-                    // Make the request and wait for the response
-                    const response = await fetch(endpointURL, endpointOptions);
-
-                    // Throw an error if the response is not ok
-                    if (!response.ok) {
-                        throw new Error('Error obtaining supervisor state');
-                    }
-
-                    // Parse the response JSON
-                    const data = await response.json();
-
-                    // Log the supervisor login state
-                    console.log("Supervisor Login State");
-                    console.log(data);
-
-                    // Return the supervisor login state
-                    return data;
-                } catch (error) {
-                    // Log the error and return null
-                    console.error(error);
-                    return null;
-                }
-            }
-
-
-            /**
-             * Start Supervisor Session
-             *
-             * Five9 VCC Supervisor API Method:
-             *   PUT /supervisors/{supervisorId}/session_start
-             *
-             * Five9 Response Sample:
-             *   
-             */
-            async supervisorSessionStart() {
-                // Construct the API endpoint URL
-                let endpointURL = `${this.base_api_url_sprvsr}/supervisors/${this.f9UserId}/session_start?force=false`;
-
-                // Define the supervisor session parameters
-                let supervisorSessionParams = {
-                    "stationId": "",
-                    "stationType": "EMPTY"
-                };
-
-                try {
-                    console.log(`endpointUrl is ${endpointURL}`)
-
-                    // Create a copy of the default XHR options and set the request method to PUT
-                    let endpointOptions = this.defaultXhrOptions;
-                    endpointOptions.method = "PUT";
-                    endpointOptions.body = JSON.stringify(supervisorSessionParams);
-
-                    // Make the request and wait for the response
-                    const supervisorSessionDataResponse = await fetch(endpointURL, endpointOptions);
-                    const supervisorSessionData = await supervisorSessionDataResponse.json();
-
-                    // Log the supervisor session information
-                    console.log("Supervisor Login State");
-                    console.log(supervisorSessionData);
-
-                    // Return the supervisor session information
-                    return supervisorSessionData;
-                } catch (error) {
-                    // Log the error and return null
-                    console.error(error);
-                    return null;
-                }
-            }
-
-
-            /**
-             * Get the campaign profiles for the current organization.
-             *
-             * This method makes a request to the Five9 VCC Agent API to obtain a list of campaign profiles associated with the current organization.
-             *
-             * Five9 VCC Agent API Method:
-             *   GET /orgs/{orgId}/campaign_profiles
-             *
-             * Five9 Response Sample:
-             *   [
-             *     {"id":"144133","name":"ob_outreach"},
-             *     {"id":"144143","name":"ob_outreach_es"},
-             *     {"id":"144144","name":"ib_test"},
-             *     ...
-             *   ]
-             *
-             * @async
-             * @function
-             * @returns {Promise<Array<Object>|null>} Returns a Promise that resolves to an array of campaign profile objects or null if there was an error.
-             */
-            async getCampaignProfiles() {
-                // Construct the API endpoint URL using the base supervisor API URL and the organization ID
-                const endpointURL = `${this.base_api_url_sprvsr}/orgs/${this.f9OrgId}/campaign_profiles`;
-
-                // Call the f9APiMethod with the endpoint URL and the GET method
-                return this.f9ApiMethod(endpointURL, "GET");
-            }
-
-
-            /**
-             * Get the agent states for the current organization and map them to user IDs.
-             *
-             * This method makes a request to the Five9 VCC Agent API to obtain a list of agent states associated with the current organization
-             * and maps the agent states to the userId objects using the agentStatesMap.
-             *
-             * Five9 VCC Agent API Method:
-             *   GET /orgs/{orgId}/agent_states
-             *
-             * Five9 Response Sample:
-             *   {"3590201":"","3578927":"cehs"}
-             *
-             * @async
-             * @function
-             * @returns {Promise<Object|null>} Returns a Promise that resolves to an object containing the mapped agent states or null if there was an error.
-             */
-            async getAgentStates() {
-                const agentStatesMap = {
-                    "a": "CASE",
-                    "c": "CALL",
-                    "d": "Video",
-                    "e": "EMAIL",
-                    "i": "HAS_VIDEO_LICENSE",
-                    "o": "LOGGED_OUT",
-                    "s": "SOCIAL",
-                    "h": "CHAT",
-                    "v": "VOICE_MAIL"
-                };
-
-                // Construct the API endpoint URL using the base supervisor API URL and the organization ID
-                const endpointURL = `${this.base_api_url_sprvsr}/orgs/${this.f9OrgId}/agent_states`;
-
-                try {
-                    // Call the f9APiMethod with the endpoint URL and the GET method
-                    const agentStates = await this.f9ApiMethod(endpointURL, "GET");
-
-                    // Map the agent states to the userId objects using the agentStatesMap
-                    const mappedAgentStates = Object.fromEntries(
-                        Object.entries(agentStates).map(([userId, stateString]) => [
-                            userId,
-                            stateString.split("").map((char) => agentStatesMap[char] || char).join(", "),
-                        ])
-                    );
-                    console.log(mappedAgentStates)
-                    // Return the mapped agent states
-                    return mappedAgentStates;
-                } catch (error) {
-                    // Log the error and return null
-                    console.error(error);
-                    return null;
-                }
-            }
-
-
-            /**
-             * Get domain call variables and organize them by group and name.
-             *
-             * This method makes a request to the Five9 VCC Agent API to obtain a list of call attached variables (CAVs) for the current organization
-             * and organizes them by their group and name.
-             *
-             * Five9 VCC Agent API Method:
-             *   GET /orgs/{orgId}/call_variables
-             *
-             * @async
-             * @function
-             * @returns {Promise<Object|null>} Returns a Promise that resolves to an object containing the organized call attached variables or null if there was an error.
-             */
-            async getDomainCallVariables() {
-                // Construct the API endpoint URL using the base agent API URL and the organization ID
-                let endpointURL = `${this.base_api_url_agents}/orgs/${this.f9OrgId}/call_variables`;
-
-                // Fetch the domain call attached variables using the f9APiMethod
-                console.log("about to call f9APiMethod")
-                let domainCavs = await this.f9ApiMethod(endpointURL, "GET");
-
-                // Initialize an empty object to store the organized call attached variables
-                let cavs = {};
-
-                // Iterate through each call attached variable and organize them by group and name
-                domainCavs.forEach((cav) => {
-                    cavs[cav.group] = cavs[cav.group] || {};
-                    cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
-                    cavs[cav.group][cav.name]["id"] = cav.id;
-                    cavs[cav.group][cav.name]["type"] = cav.type;
-                    cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
-                });
-
-                // Log the transformed domain call attached variables
-                console.log("Domain CAVs after transformation:");
-                console.log(cavs);
-
-                // Return the organized call attached variables
-                return cavs;
-            }
-
-        }
-
-
-        function onDocumentReady(fn) {
-            if (document.readyState !== 'loading') {
-                fn();
-            } else {
-                document.addEventListener('DOMContentLoaded', fn);
-            }
-        }
-        onDocumentReady(async function () {
-            const session = new Five9Session();
-            const metadataObtained = await session.getSessionMetadata();
-            if (metadataObtained === true) {
-                // start an agent websocket
-                let agentWebSocket = session.connectAgentWebsocket();
-
-                // start a supervisor websocket, wait to do other supervisor stuff until it's connected
-                let superWebSocket = await session.connectSupervisorWebsocket();
-                session.getCampaignProfiles();
-
-            } else {
-                console.log("can't do the cool stuff")
-            }
+            console[mode](`${this.prefix} ${d.toLocaleString("en-US", dOptions)}: ${message}`);
+
+          };
+        });
+      }
+    }
+
+    const console2 = new consoleLogger();
+
+    class f9socketEvent {
+      constructor(eventName, handler, session) {
+        this.eventName = eventName;
+        this.handle = handler;
+        this.session = session;
+      }
+    }
+
+    /**
+     * The constructor function for the Five9Session class.
+     *
+     * @class
+     * @classdesc Represents a Five9 session with various helper methods for interacting with the Five9 API.
+     */
+    class Five9Session {
+      /**
+       * Creates a new Five9Session instance with default properties.
+       */
+      constructor() {
+        // Set the Freedom Metadata URL
+        this.freedomMetadataURL =
+          "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
+
+        // Generate a random socket key
+        this.randomSocketKey = (Math.random() * 1000 + 1)
+          .toString()
+          .split(".")[0];
+
+        // Set the context paths for various API endpoints
+        this.contextPaths = {
+          agent_rest: "/appsvcs/rs/svc",
+          agent_str: "/strsvcs/rs/svc",
+          sup_rest: "/supsvcs/rs/svc",
+          websocket_agent: `/appsvcs/ws/${this.randomSocketKey}_agent`,
+          websocket_super: `/supsvcs/sws/${this.randomSocketKey}_super`,
+        };
+
+        // Set the default XHR options
+        this.defaultXhrOptions = {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        };
+
+        // placeholder for updated metadata if provided by a websocket event
+        this.newMetadata = null;
+
+        this.commonSocketEventHanders = {
+          1002: new f9socketEvent(
+            "EVENT_METADATA_UPDATE",
+            function (eventData) {
+              console2.log(this.eventName, eventData.context.eventReason);
+              console2.log(eventData);
+              this.session.newMetadata = eventData.payLoad;
+            },
+            this
+          ),
+          73: new f9socketEvent(
+            "EVENT_MIGRATION_COMPLETE",
+            async function (eventData) {
+              console2.log(this.eventName, eventData.context.eventReason);
+              console2.log(eventData);
+              if (this.session.newMetadata) {
+                await this.session.reinitializeWebSocket(
+                  this.session.newMetadata
+                );
+              }
+            },
+            this
+          ),
+        };
+      }
+
+      /**
+       * Rebuilds the WebSocket connection using the new metadata provided by the EVENT_METADATA_UPDATE event.
+       *
+       * @returns {Promise} A Promise that resolves with the Freedom Metadata for the current user.
+       */
+      async reinitializeWebSocket(newMetadata) {
+        // Update instance properties using the new metadata
+        const host = newMetadata.dataCenters[0].apiUrls[0].host;
+        const port = newMetadata.dataCenters[0].apiUrls[0].port;
+        this.base_api_url = `https://${host}:${port}`;
+        this.base_ws_url = `wss://${host}:${port}`;
+
+        this.base_api_url_agents = `${this.base_api_url}${this.contextPaths.agent_rest}`;
+        this.base_api_url_sprvsr =
+          this.base_api_url + this.contextPaths.sup_rest;
+
+        this.base_websocket_api_url_agent =
+          this.base_ws_url + this.contextPaths.websocket_agent;
+        this.base_websocket_api_url_supervisor =
+          this.base_ws_url + this.contextPaths.websocket_super;
+
+        // Reconnect the WebSocket
+        await this.connectAgentWebsocket();
+      }
+
+      /**
+       * Connect to a WebSocket endpoint and process events using provided event handlers.
+       *
+       * @param {string} endpointUrl - The URL of the WebSocket endpoint to connect to.
+       * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
+       */
+      async connectSocket(endpointUrl, f9socketEventHandlers) {
+        // Create a new WebSocket instance with the provided endpoint URL
+        const f9Socket = new window.WebSocket(endpointUrl);
+        let pingIntervalHandle = null;
+
+        // Set up the 'onopen' event handler for the WebSocket
+        f9Socket.onopen = function () {
+          // Keep the socket connection alive by sending a 'ping' message every 15 seconds
+          pingIntervalHandle = window.setInterval(function () {
+            f9Socket.send("ping");
+          }, 15000);
+          console2.info("Websocket Opened");
+        };
+
+        // Attach a callback function to the "message" events on the socket
+        f9Socket.addEventListener("message", function (event) {
+          // Parse the event data received from the WebSocket message
+          const eventData = JSON.parse(event.data);
+
+          // Log the event data if the "verbose=true" query parameter is present
+          if (window.location.search.indexOf("verbose=true") > -1) {
+            console2.log(
+              eventData.context.eventId + ": " + eventData.context.eventReason
+            );
+            console2.log(eventData);
+          }
+
+          // Retrieve the event handler for the specific event ID
+          let eventHandler = f9socketEventHandlers[eventData.context.eventId];
+          if (eventHandler) {
+            // Call the event handler with the event data
+            eventHandler.handle(eventData);
+          } else {
+            // Register a new 'Unhandled Socket Event' handler if no handler exists for the event ID
+            console2.log(
+              `Unhandled Socket Event Registered:\n\t${eventData.context.eventId
+              }\n\t${JSON.stringify(eventData.payLoad)}`
+            );
+            f9socketEventHandlers[eventData.context.eventId] =
+              new f9socketEvent("Unhandled Socket Event", function (
+                eventData
+              ) {
+                // console2.log(this.eventName, eventData.context.eventReason)
+              });
+          }
+          // console2.log(eventData);
         });
 
-    </script>
+        // Set up the 'onclose' event handler for the WebSocket
+        f9Socket.onclose = function () {
+          // Clear the ping interval when the WebSocket connection is closed
+          window.clearInterval(pingIntervalHandle);
+        };
+
+        // Add an event listener for the 'unload' event to close the WebSocket connection when the page is unloaded
+        window.addEventListener("unload", function () {
+          f9Socket.close();
+        });
+        return f9Socket;
+      }
+
+      /**
+       * Connect to the agent WebSocket endpoint and process events using provided event handlers.
+       *
+       * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
+       */
+      async connectAgentWebsocket() {
+        let f9SocketEventHandlersAgent = {
+          15: new f9socketEvent(
+            "EVENT_AGENTS_READY_PRESENCES_SUBSCRIPTION_UPDATE",
+            function (eventData) {
+              // console2.log("presenceupdate");
+            },
+            this
+          ),
+          4: new f9socketEvent(
+            "EVENT_CALL_UPDATED",
+            function (eventData) {
+              console2.log(this.eventName, eventData.context.eventReason);
+              console2.log(eventData);
+
+              // EXAMPLE use events to stop/start recording for all calls
+              // let stopRecordingReasons = ["UPDATED", "CONNECTED", "RECORDING_ALLOWED"];
+              // let stopRecordingStates = ["TALKING"];
+              // if(stopRecordingReasons.indexOf(eventData.context.eventReason) > -1 && stopRecordingStates.indexOf(eventData.payload.state)){
+              //    // do something here
+              // }
+            },
+            this
+          ),
+
+          5: new f9socketEvent(
+            "EVENT_CALL_DELETED",
+            function (eventData) {
+              console2.log(this.eventName, eventData.context.eventReason);
+              console2.log(eventData);
+            },
+            this
+          ),
+        };
+        // merge the common socket event handlers with the agent specific ones
+        f9SocketEventHandlersAgent = Object.assign(
+          f9SocketEventHandlersAgent,
+          this.commonSocketEventHanders
+        );
+
+        return this.connectSocket(
+          this.base_websocket_api_url_agent,
+          f9SocketEventHandlersAgent
+        );
+      }
+
+      /**
+       * Connect to the supervisor WebSocket endpoint and process events using provided event handlers.
+       *
+       * @param {Object} f9socketEventHandlers - An object containing event handlers for different event IDs.
+       */
+      async connectSupervisorWebsocket() {
+        // Get the current supervisor state
+        const currentSupervisorState = await this.getSupervisorLoginState();
+
+        // Start a new supervisor session if not in the "WORKING" state
+        if (currentSupervisorState != "WORKING") {
+          console2.log("Starting a new supervisor session...");
+          await this.supervisorSessionStart();
+        }
+
+        // Define event handlers for supervisor socket events here:
+        let f9SocketEventHandlersSupervisor = {
+          5000: new f9socketEvent(
+            "EVENT_STATS",
+            function (eventData) {
+              console2.log("Initial statistics data has been received.");
+            },
+            this
+          ),
+          5012: new f9socketEvent(
+            "EVENT_INCREMENTAL_STATS_UPDATE",
+            function (eventData) {
+              console2.log("Statistics incremental update has been received.");
+            },
+            this
+          ),
+        };
+        // merge the common socket event handlers with the supervisor specific ones
+        f9SocketEventHandlersSupervisor = Object.assign(
+          f9SocketEventHandlersSupervisor,
+          this.commonSocketEventHanders
+        );
+
+        return this.connectSocket(
+          this.base_websocket_api_url_supervisor,
+          f9SocketEventHandlersSupervisor
+        );
+      }
+
+      /**
+       * A generic asynchronous method for making API requests to the agent and supervisor REST API.
+       *
+       * @async
+       * @function
+       * @param {string} endpointURL - The URL of the API endpoint.
+       * @param {string} method - The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
+       * @param {Object} [endpointOptions] - Optional configuration object for the request, such as headers.
+       * @param {Object|string} [payload] - Optional request payload, if applicable.
+       * @param {bool} bypassSupervisorCheck - Optrional, bypass the supervisor check for supervisor methods that do not need a check.
+       * @returns {Promise<Object|null>} Returns a Promise that resolves to the JSON response object or null if there was an error.
+       * @throws {Error} If the response is not ok.
+       */
+      async f9ApiMethod(
+        endpointURL,
+        method,
+        endpointOptions = undefined,
+        payload = undefined,
+        bypassSupervisorCheck = false
+      ) {
+        // log all the method parameters for debugging to the console if the "verbose=true" query parameter is present
+        if (window.location.search.indexOf("verbose=true") > -1) {
+          console2.log("f9ApiMethod Parameters:");
+          console2.log(`\tendpointURL: ${endpointURL}`);
+          console2.log(`\tmethod: ${method}`);
+          console2.log(
+            `\tendpointOptions: ${JSON.stringify(endpointOptions)}`
+          );
+          console2.log(`\tbyPassSupervisorCheck: ${bypassSupervisorCheck}`);
+        }
+
+        // Check if the request is for the supervisor REST API and if the check should not be bypassed
+        if (
+          bypassSupervisorCheck === false &&
+          endpointURL.indexOf(this.contextPaths.sup_rest) > -1
+        ) {
+          // Get the current supervisor login state
+          console2.log("Checking supervisor login state...");
+          const currentSupervisorState = await this.getSupervisorLoginState();
+
+          // Start a new supervisor session if not in the "WORKING" state
+          if (currentSupervisorState != "WORKING") {
+            console2.log("Starting a new supervisor session...");
+            await this.supervisorSessionStart();
+          }
+        }
+
+        // Set default options if endpointOptions is not provided
+        if (!endpointOptions) {
+          endpointOptions = this.defaultXhrOptions;
+        }
+
+        // Update the request method in endpointOptions
+        endpointOptions.method = method;
+
+        // Add the payload to the request options, if provided
+        if (payload) {
+          endpointOptions.body = payload;
+          // Convert the payload to a JSON string if it's an object and the Content-Type is "application/json"
+          if (
+            endpointOptions["Content-Type"] == "application/json" &&
+            typeof payload == "object"
+          ) {
+            endpointOptions.body = JSON.stringify(endpointOptions.body);
+          }
+        }
+
+        try {
+          // Log the endpoint URL
+          console2.log(`Endpoint URL: ${endpointURL}`);
+
+          // Make the request and wait for the response
+          const response = await fetch(endpointURL, endpointOptions);
+
+          // Throw an error if the response is not ok
+          if (!response.ok) {
+            throw new Error(`Error fetching ${endpointURL}`);
+          }
+
+          // Parse the response JSON
+          const data = await response.json();
+
+          // Log the response data
+          console2.log(`Endpoint Response Body: ${data}`);
+          console2.log(data);
+
+          // Return the response data
+          return data;
+        } catch (error) {
+          // Log the error and return null
+          console2.error(error);
+          return null;
+        }
+      }
+
+      /**
+       * Fetch session metadata and initialize the instance properties.
+       *
+       * This method should be the first thing called after initializing the Five9Session object.
+       * It fetches session metadata from the Five9 API, extracts the necessary data,
+       * and initializes the instance properties accordingly.
+       *
+       * @async
+       * @function
+       * @returns {Promise<boolean>} Returns a Promise that resolves to true if the metadata is successfully acquired, and false otherwise.
+       */
+      async getSessionMetadata() {
+        try {
+          // Fetch the session metadata from the Five9 API
+          const response = await fetch(this.freedomMetadataURL, {
+            credentials: "include",
+          });
+          if (!response.ok) {
+            throw new Error("Error fetching session metadata");
+          }
+
+          // Parse the response as JSON
+          const metadataResponse = await response.json();
+
+          // Set instance properties using the fetched metadata
+          this.f9OrgId = metadataResponse.orgId;
+          this.f9UserId = metadataResponse.userId;
+          this.f9TokenId = metadataResponse.tokenId;
+
+          const host =
+            metadataResponse.metadata.dataCenters[0].apiUrls[0].host;
+          const port =
+            metadataResponse.metadata.dataCenters[0].apiUrls[0].port;
+          this.base_api_url = `https://${host}:${port}`;
+          this.base_ws_url = `wss://${host}:${port}`;
+
+          this.base_api_url_agents = `${this.base_api_url}${this.contextPaths.agent_rest}`;
+          this.base_api_url_sprvsr = `${this.base_api_url}${this.contextPaths.sup_rest}`;
+
+          this.base_websocket_api_url_agent = `${this.base_ws_url}${this.contextPaths.websocket_agent}`;
+          this.base_websocket_api_url_supervisor = `${this.base_ws_url}${this.contextPaths.websocket_super}`;
+
+          // Log the successful acquisition of metadata
+          console2.log("Metadata successfully acquired");
+
+          // Return true to indicate successful metadata acquisition
+          return true;
+        } catch (error) {
+          // Log an error message and return false to indicate failure
+          console2.log(
+            "You must be logged into Five9 in another browser tab for this to work"
+          );
+          return false;
+        }
+      }
+
+      /**
+       * Get the current login state of the supervisor.
+       *
+       * This method makes a request to the Five9 VCC Supervisor API to obtain the supervisor's login state.
+       *
+       * Five9 VCC Supervisor API Method:
+       *   GET /supervisors/{supervisorId}/login_state
+       *
+       * Five9 Response Sample:
+       *     "WORKING"
+       *
+       * @async
+       * @function
+       * @returns {Promise<string|null>} Returns a Promise that resolves to the supervisor's login state or null if there was an error.
+       * @throws {Error} If the response is not ok.
+       */
+      async getSupervisorLoginState() {
+        // Construct the API endpoint URL
+        let endpointURL = `${this.base_api_url_sprvsr}/supervisors/${this.f9UserId}/login_state`;
+
+        // Log the endpoint URL
+        console2.log(endpointURL);
+
+        // Create a copy of the default XHR options and set the request method to GET
+        let endpointOptions = { ...this.defaultXhrOptions, method: "GET" };
+
+        try {
+          // Make the request and wait for the response
+          const response = await fetch(endpointURL, endpointOptions);
+
+          // Throw an error if the response is not ok
+          if (!response.ok) {
+            throw new Error("Error obtaining supervisor state");
+          }
+
+          // Parse the response JSON
+          const data = await response.json();
+
+          // Log the supervisor login state
+          console2.log("Supervisor Login State");
+          console2.log(data);
+
+          // Return the supervisor login state
+          return data;
+        } catch (error) {
+          // Log the error and return null
+          console2.error(error);
+          return null;
+        }
+      }
+
+      /**
+       * Start Supervisor Session
+       *
+       * Five9 VCC Supervisor API Method:
+       *   PUT /supervisors/{supervisorId}/session_start
+       *
+       * Five9 Response Sample:
+       *
+       */
+      async supervisorSessionStart() {
+        // Construct the API endpoint URL
+        let endpointURL = `${this.base_api_url_sprvsr}/supervisors/${this.f9UserId}/session_start?force=false`;
+
+        // Define the supervisor session parameters
+        let supervisorSessionParams = {
+          stationId: "",
+          stationType: "EMPTY",
+        };
+
+        try {
+          console2.log(`endpointUrl is ${endpointURL}`);
+
+          // Create a copy of the default XHR options and set the request method to PUT
+          let endpointOptions = this.defaultXhrOptions;
+          endpointOptions.method = "PUT";
+          endpointOptions.body = JSON.stringify(supervisorSessionParams);
+
+          // Make the request and wait for the response
+          const supervisorSessionDataResponse = await fetch(
+            endpointURL,
+            endpointOptions
+          );
+          const supervisorSessionData =
+            await supervisorSessionDataResponse.json();
+
+          // Log the supervisor session information
+          console2.log("Supervisor Login State");
+          console2.log(supervisorSessionData);
+
+          // Return the supervisor session information
+          return supervisorSessionData;
+        } catch (error) {
+          // Log the error and return null
+          console2.error(error);
+          return null;
+        }
+      }
+
+      /**
+       * Get the campaign profiles for the current organization.
+       *
+       * This method makes a request to the Five9 VCC Agent API to obtain a list of campaign profiles associated with the current organization.
+       *
+       * Five9 VCC Agent API Method:
+       *   GET /orgs/{orgId}/campaign_profiles
+       *
+       * Five9 Response Sample:
+       *   [
+       *     {"id":"144133","name":"ob_outreach"},
+       *     {"id":"144143","name":"ob_outreach_es"},
+       *     {"id":"144144","name":"ib_test"},
+       *     ...
+       *   ]
+       *
+       * @async
+       * @function
+       * @returns {Promise<Array<Object>|null>} Returns a Promise that resolves to an array of campaign profile objects or null if there was an error.
+       */
+      async getCampaignProfiles() {
+        // Construct the API endpoint URL using the base supervisor API URL and the organization ID
+        const endpointURL = `${this.base_api_url_sprvsr}/orgs/${this.f9OrgId}/campaign_profiles`;
+
+        // Call the f9APiMethod with the endpoint URL and the GET method
+        return this.f9ApiMethod(endpointURL, "GET");
+      }
+
+      /**
+       * Get the agent states for the current organization and map them to user IDs.
+       *
+       * This method makes a request to the Five9 VCC Agent API to obtain a list of agent states associated with the current organization
+       * and maps the agent states to the userId objects using the agentStatesMap.
+       *
+       * Five9 VCC Agent API Method:
+       *   GET /orgs/{orgId}/agent_states
+       *
+       * Five9 Response Sample:
+       *   {"3590201":"","3578927":"cehs"}
+       *
+       * @async
+       * @function
+       * @returns {Promise<Object|null>} Returns a Promise that resolves to an object containing the mapped agent states or null if there was an error.
+       */
+      async getAgentStates() {
+        const agentStatesMap = {
+          a: "CASE",
+          c: "CALL",
+          d: "Video",
+          e: "EMAIL",
+          i: "HAS_VIDEO_LICENSE",
+          o: "LOGGED_OUT",
+          s: "SOCIAL",
+          h: "CHAT",
+          v: "VOICE_MAIL",
+        };
+
+        // Construct the API endpoint URL using the base supervisor API URL and the organization ID
+        const endpointURL = `${this.base_api_url_sprvsr}/orgs/${this.f9OrgId}/agent_states`;
+
+        try {
+          // Call the f9APiMethod with the endpoint URL and the GET method
+          const agentStates = await this.f9ApiMethod(endpointURL, "GET");
+
+          // Map the agent states to the userId objects using the agentStatesMap
+          const mappedAgentStates = Object.fromEntries(
+            Object.entries(agentStates).map(([userId, stateString]) => [
+              userId,
+              stateString
+                .split("")
+                .map((char) => agentStatesMap[char] || char)
+                .join(", "),
+            ])
+          );
+          console2.log(mappedAgentStates);
+          // Return the mapped agent states
+          return mappedAgentStates;
+        } catch (error) {
+          // Log the error and return null
+          console2.error(error);
+          return null;
+        }
+      }
+
+      /**
+       * Get domain call variables and organize them by group and name.
+       *
+       * This method makes a request to the Five9 VCC Agent API to obtain a list of call attached variables (CAVs) for the current organization
+       * and organizes them by their group and name.
+       *
+       * Five9 VCC Agent API Method:
+       *   GET /orgs/{orgId}/call_variables
+       *
+       * @async
+       * @function
+       * @returns {Promise<Object|null>} Returns a Promise that resolves to an object containing the organized call attached variables or null if there was an error.
+       */
+      async getDomainCallVariables() {
+        // Construct the API endpoint URL using the base agent API URL and the organization ID
+        let endpointURL = `${this.base_api_url_agents}/orgs/${this.f9OrgId}/call_variables`;
+
+        // Fetch the domain call attached variables using the f9APiMethod
+        console2.log("about to call f9APiMethod");
+        let domainCavs = await this.f9ApiMethod(endpointURL, "GET");
+
+        // Initialize an empty object to store the organized call attached variables
+        let cavs = {};
+
+        // Iterate through each call attached variable and organize them by group and name
+        domainCavs.forEach((cav) => {
+          cavs[cav.group] = cavs[cav.group] || {};
+          cavs[cav.group][cav.name] = cavs[cav.group][cav.name] || {};
+          cavs[cav.group][cav.name]["id"] = cav.id;
+          cavs[cav.group][cav.name]["type"] = cav.type;
+          cavs[cav.group][cav.name]["restrictions"] = cav.restrictions;
+        });
+
+        // Log the transformed domain call attached variables
+        console2.log("Domain CAVs after transformation:");
+        console2.log(cavs);
+
+        // Return the organized call attached variables
+        return cavs;
+      }
+    }
+
+    function onDocumentReady(fn) {
+      if (document.readyState !== "loading") {
+        fn();
+      } else {
+        document.addEventListener("DOMContentLoaded", fn);
+      }
+    }
+    onDocumentReady(async function () {
+      const session = new Five9Session();
+      const metadataObtained = await session.getSessionMetadata();
+      if (metadataObtained === true) {
+        // start an agent websocket
+        let agentWebSocket = session.connectAgentWebsocket();
+
+        // start a supervisor websocket, wait to do other supervisor stuff until it's connected
+        let superWebSocket = await session.connectSupervisorWebsocket();
+        session.getCampaignProfiles();
+      } else {
+        console2.log("can't do the cool stuff");
+      }
+    });
+  </script>
 </body>
 
 </html>
