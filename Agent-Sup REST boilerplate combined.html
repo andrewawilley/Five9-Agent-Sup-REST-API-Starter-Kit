@@ -7,14 +7,12 @@
     content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API" />
   <meta name="author" content="andrew.willey@five9.com" />
   <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com/3.3.0"></script>
 </head>
 
-<body class="bg-gray-100">
-  <main class="container mx-auto">
-    <h1 class="text-3xl font-bold mb-4">Note</h1>
-    <p class="text-lg">
+<body>
+  <main>
+    <h1>Note</h1>
+    <p>
       See browser inspector for details. Must be signed in as an agent for
       this to work. Supervisor functionality only works if user also has
       supervisor roles/permissions
@@ -459,11 +457,7 @@
           this.base_websocket_api_url_supervisor = `${this.base_ws_url}${this.contextPaths.websocket_super}`;
 
           // Log the successful acquisition of metadata
-          console2.log("Metadata successfully acquired");
-          console2.log(`\torgId: ${this.f9OrgId}`);
-          console2.log(`\tuserId: ${this.f9UserId}`);
-          console2.log(`\ttokenId: ${this.f9TokenId}`);
-          
+          console2.log(`Metadata successfully acquired\norgId: \t${this.f9OrgId}\nuserId: \t${this.f9UserId}\ntokenId: \t${this.f9TokenId}`);
 
           // Return true to indicate successful metadata acquisition
           return true;
@@ -716,8 +710,8 @@
         let agentWebSocket = session.connectAgentWebsocket();
 
         // start a supervisor websocket, wait to do other supervisor stuff until it's connected
-        let superWebSocket = await session.connectSupervisorWebsocket();
-        session.getCampaignProfiles();
+        // let superWebSocket = await session.connectSupervisorWebsocket();
+        // session.getCampaignProfiles();
       } else {
         console2.log("can't do the cool stuff");
       }
