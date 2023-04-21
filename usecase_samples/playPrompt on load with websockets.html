@@ -264,7 +264,8 @@
             // first obtain session metadata, and once that is complete, open a socket
             $.when(getSessionMetadata()).then(function (sessionMetaData) {
                 // click the Interaction tab to ensure the agent is in the Interaction view
-                window.parent.$('span:contains("Interaction")').click();
+                // window.parent.$('span:contains("Interaction")').click();
+                getPrompts();
 
                 console.info('Session Metadata:', sessionMetaData);
                 const socket = new window.WebSocket(base_websocket_api_url);
