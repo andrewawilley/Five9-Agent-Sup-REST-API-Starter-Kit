@@ -15,7 +15,16 @@ As described in the <a href="https://webapps.five9.com/assets/files/for_customer
 * Determine the appropriate context path for the endpoint
 * Invoke the method with the fully formed path
 
-# DISCLAIMER:
-This sample code is provided for illustrative purposes and should not be treated as officially supported software by Five9. By using this code, you understand that any customization, modification, or deployment is solely your responsibility if you  choose not to engage with Five9's professional services team.
+# DISCLAIMER
 
-While these examples demonstrate how customizations can be built, it is recommended that you consult with Five9 professional  services team for a fully supported and tailored solution to meet your specific needs.
+This repository contains sample code which is **not an official Five9 resource**. It's intended for educational and illustrative purposes only, demonstrating potential ways to utilize APIs in the Five9 contact center environment.
+
+By choosing to use this code, you acknowledge and agree to the following:
+
+- This is **not** officially endorsed or supported software by Five9.
+- All customizations, modifications, or deployments made with this code are entirely at your **own risk** and **responsibility**.
+- The provided code may not cover all possible use cases or be adapted to your specific needs without further modification.
+- Five9 will **not** provide any support or assume any liability for any issues that may arise from the use of this code.
+
+For a fully supported, robust, and tailor-made solution, we highly recommend consulting with Five9's professional services team. Utilizing their expertise ensures a reliable and efficient setup that meets your specific needs, and comes with the added benefit of official support.
+
