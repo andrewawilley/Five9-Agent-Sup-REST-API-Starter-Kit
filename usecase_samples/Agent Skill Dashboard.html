@@ -19,6 +19,7 @@
                         <tr>
                             <th>Skill</th>
                             <th>Calls</th>
+                            <th>Queue Callbacks</th>
                             <th>Longest In Queue</th>
                         </tr>
                     </table>
@@ -153,11 +154,10 @@
             function getAgentSkills() {
                 let agentSkillInfo;
                 return $.get(base_agents_api_url+"/agents/"+ f9UserId +"/skills", function(res){
-                    // nconsole.log("CampaignInfo " + campaignId + " DETAIL: ");
-                    // console.log(res);
+                    // console.log("CampaignInfo " + campaignId + " DETAIL: ");
+                    console.log(res);
                     campaignInfo = res;
                     });
-                // return agentSkillInfo;
             }
 
             /**
@@ -964,6 +964,7 @@
                     console.log(Object.entries(eventData.payLoad))
                     for (const [skillId, skillData] of Object.entries(eventData.payLoad)) {
                         $(`.${skillId}-callsInQueue`).html(skillData.inQueueCallCount);
+                        $(`.${skillId}-queueCallbacks`).html(skillData.inQueueCallbackCount);
                         $(`.${skillId}-longest`).html(skillData.longestTimeInQueueSec);
                     }
                 })
@@ -995,6 +996,8 @@
                                 $('<td>').addClass(skill.id+"-skillName").html(skill.name)
                             ).append(
                                 $('<td>').addClass(skill.id+"-callsInQueue")
+                            ).append(
+                                $('<td>').addClass(skill.id+"-queueCallbacks")
                             ).append(
                                 $('<td>').addClass(skill.id+"-longest")
                             )

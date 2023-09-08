@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="description"
+        content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API">
+    <meta name="author" content="andrew.willey@five9.com">
+
+    <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+</head>
+
+<body>
+
+    <button class="call-external" targetCampaign="ob_outreach">9133259337</button>
+    <button class="call-external">9135554444</button>
+
+    <script type="text/javascript">
+        let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
+        let five9SessionData;
+
+        let contextPaths = {
+            "agent_rest": "/appsvcs/rs/svc",
+            "agent_str": "/strsvcs/rs/svc",
+            "sup_rest": "/supsvcs/rs/svc"
+        }
+
+        let base_api_url;
+        let base_agents_api_url;
+        let base_supervisor_api_url;
+
+        let f9OrgId;
+        let f9UserId;
+
+        let DEFAULT_CAMPAIGN_NAME = "ob_outreach";
+
+        // HTTP Request Wrapper
+        function httpRequest(url, method, callback, data = null) {
+            const options = {
+                method: method,
+                mode: 'cors',  // Enabling CORS mode
+                credentials: 'include'  // To include credentials
+            };
+
+            if (data) {
+                options.headers = {
+                    'Content-Type': 'application/json'
+                };
+                options.body = JSON.stringify(data);
+            }
+
+            fetch(url, options)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => callback(data))
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Five9 API Wrappers
+        // getCampaignInfo() - Get Campaign Info by Campaign ID to obtain Campaign Name
+        function getCampaignInfo(campaignId, callback) {
+            httpRequest(`${base_agents_api_url}/orgs/${f9OrgId}/campaigns/${campaignId}`, 'GET', callback);
+        }
+        
+        // getAgentCampaigns() - Get Agent Campaigns by Agent ID to obtain Campaign IDs that the agent can call from
+        // based on the assigned skills for the agent
+        function getAgentCampaigns(callback) {
+            let agentCampaignsInfo = {};
+            let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/campaigns_config`;
+        
+            httpRequest(endpointURL, 'GET', function (res) {
+                let promises = [];
+                
+                // Loop through each campaign ID and get the campaign info
+                res.campaignIds.forEach(function (campaignId, index) {
+                    promises.push(new Promise(resolve => {
+                        getCampaignInfo(campaignId, function (campaign) {
+                            agentCampaignsInfo[campaign.name] = campaign;
+                            resolve();
+                        });
+                    }));
+                });
+        
+                Promise.all(promises).then(() => {
+                    callback(agentCampaignsInfo);
+                });
+            });
+        }
+        
+        // callExternalNumber() - Make an external call to a number
+        function callExternalNumber(dnis, campaignName = null, campaignId = null) {
+            let ExternalCallDestinationInfo = {
+                number: dnis,
+                campaignId: campaignId
+            };
+        
+            if (campaignId == null) {
+                // If campaignId is not provided, get the campaignId from the campaignName
+                getAgentCampaigns(function (agentCampaigns) {
+                    ExternalCallDestinationInfo["campaignId"] = agentCampaigns[campaignName].id;
+        
+                    if (ExternalCallDestinationInfo["campaignId"] == null) {
+                        console.log("callExternalNumber() did not find a valid campaign name");
+                    }
+        
+                    let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/make_external_call`;
+                    httpRequest(endpointURL, 'POST', ExternalCallDestinationInfo, function (success_response) {
+                        console.log("Making External Call");
+                        console.log(success_response);
+                    });
+                });
+            }
+        }
+        
+        // clickToCallButton handles the click event of the button
+        function clickToCallButton(dnis, campaignName = null, campaignId = null) {
+            httpRequest(freedomMetadataURL, 'GET', function (data) {
+                five9SessionData = data;
+                f9OrgId = five9SessionData.orgId;
+                f9UserId = five9SessionData.userId;
+        
+                base_api_url = `https://${five9SessionData.metadata.dataCenters[0].apiUrls[0].host}:${five9SessionData.metadata.dataCenters[0].apiUrls[0].port}`;
+                base_agents_api_url = `${base_api_url}${contextPaths.agent_rest}`;
+                base_supervisor_api_url = `${base_api_url}${contextPaths.sup_rest}`;
+        
+                callExternalNumber(dnis, campaignName, campaignId);
+            });
+        }
+        
+        // Add event listeners to all buttons with class "call-external"
+        document.addEventListener("DOMContentLoaded", function () {
+            const buttons = document.querySelectorAll(".call-external");
+            buttons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    clickToCallButton(button.textContent, DEFAULT_CAMPAIGN_NAME);
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>
