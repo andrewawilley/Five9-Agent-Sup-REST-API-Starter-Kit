@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web2Campaign Sample Form</title>
+    <!-- Include Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto mt-5 p-6 bg-white shadow-md rounded-md max-w-md">
+        <h2 class="text-2xl font-semibold mb-5">Data Collection Form</h2>
+        <form id="dataForm">
+            <div class="input-field mb-4">
+                <label for="first_name" class="block text-gray-700">First Name</label>
+                <input type="text" class="form-input mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                    id="first_name" name="first_name" value="">
+            </div>
+            <div class="input-field mb-4">
+                <label for="last_name" class="block text-gray-700">Last Name</label>
+                <input type="text" class="form-input mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                    id="last_name" name="last_name" value="">
+            </div>
+            <div class="input-field mb-4">
+                <label for="number1" class="block text-gray-700">Primary Contact Number</label>
+                <input type="text" class="form-input mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                    id="number1" name="number1" value="">
+            </div>
+            <div class="input-field mb-4">
+                <label for="email" class="block text-gray-700">Email</label>
+                <input type="email" class="form-input mt-1 block w-full p-2 border border-gray-300 rounded-md"
+                    id="email" name="email" value="">
+            </div>
+
+            <!-- Add additional input blocks as desired.  
+                 The "name" value for each input field must match a Contact Field on your Five9 Domain
+            -->
+
+            <button type="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                onclick="postData()">Submit</button>
+        </form>
+        <!-- Div to display the processing result -->
+        <div id="messageDiv" class="mt-5 p-4 border-l-4 p-4"
+            style="display: none;">
+            <p id="messageText"></p>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        function postData() {
+            let w2cHeaders = new Headers();
+            w2cHeaders.append("Content-Type", "application/x-www-form-urlencoded");
+            // if your Five9 Domain requires authentication to post to the Web2Campaign API, you can use the following line to add a Basic Auth header
+            // you will need to base64 encode your Five9 username and password and assign to the auth variable
+            // let auth = ""
+            // w2cHeaders.append("Authorization", `Basic ${auth}`);
+
+            // Set the values for the F9domain, F9list, and F9keys variables
+            const F9domain = "Your Five9 Domain Name (case sensitive)";
+            const F9list = "The List you want to post to";
+
+            // IMPORTANT - the list of F9keys creates the "Unique Together" constraint that will determine 
+            //             how Five9 processes the record to Create or Update a record.  If there is an existing
+            //             record in the list with the same values for all of the F9keys, then the record will be
+            //             updated.  If there is no existing record in the list with the same values for all of the
+            //             F9keys, then a new record will be created.
+            //             If there are multiple records matching the criteria, the request will NOT be processed.
+            const F9keys = ["number1", "email"];
+
+
+            let urlencoded = new URLSearchParams();
+            urlencoded.append("F9domain", F9domain);
+            urlencoded.append("F9list", F9list);
+            // for each key in the F9keys array, append the key to the urlencoded object
+            F9keys.forEach(key => {
+                urlencoded.append("F9key", key);
+            });
+
+            // for each form field, append the field name and value to the urlencoded object using "For Each" loop
+            let form = document.getElementById("dataForm");
+            for (var i = 0; i < form.elements.length; i++) {
+                if (form.elements[i].type != "button") {
+                    urlencoded.append(form.elements[i].name, form.elements[i].value);
+                }
+            }
+
+            let requestOptions = {
+                method: 'POST',
+                headers: w2cHeaders,
+                body: urlencoded,
+                redirect: 'follow'
+            };
+
+            fetch("https://api.five9.com/web2campaign/AddToList", requestOptions)
+            .then(response => response.text())
+            .then(result => {
+                console.log(result);
+                // Parse the HTML string to a DOM object
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(result, 'text/html');
+    
+                // Get the value of the F9errDesc input field
+                let errorMsg = doc.querySelector('input[name="F9errDesc"]').value;
+    
+                // If the errorMsg is "the request was successfully processed", then the request was successful, so hide the form
+                if(errorMsg == "The request was successfully processed") {
+                    document.getElementById('messageDiv').classList.add('bg-green-100');
+                    document.getElementById('messageDiv').classList.add('border-green-500');
+                    document.getElementById('messageDiv').classList.add('text-green-700');
+                    document.getElementById('dataForm').style.display = 'none';
+                }
+                else {
+                    document.getElementById('messageDiv').classList.add('bg-red-100');
+                    document.getElementById('messageDiv').classList.add('border-red-500');
+                    document.getElementById('messageDiv').classList.add('text-red-700');
+                      
+                }
+
+                document.getElementById('messageText').textContent = errorMsg;               
+                document.getElementById('messageDiv').style.display = 'block';
+                // adda the bg-green-100 style to the messageDiv
+            })
+            .catch(error => console.log('error', error));
+        }
+    </script>
+</body>
+
+</html>

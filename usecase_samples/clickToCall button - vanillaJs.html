@@ -8,12 +8,11 @@
     <meta name="author" content="andrew.willey@five9.com">
 
     <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+
 </head>
 
 <body>
-
+    <h1>Click to Call Demo</h1>
     <button class="call-external" targetCampaign="ob_outreach">9133259337</button>
     <button class="call-external">9135554444</button>
 
@@ -110,10 +109,10 @@
                     }
         
                     let endpointURL = `${base_agents_api_url}/agents/${f9UserId}/interactions/make_external_call`;
-                    httpRequest(endpointURL, 'POST', ExternalCallDestinationInfo, function (success_response) {
+                    httpRequest(endpointURL, 'POST', function (success_response) {
                         console.log("Making External Call");
                         console.log(success_response);
-                    });
+                    }, ExternalCallDestinationInfo);
                 });
             }
         }
