@@ -139,77 +139,8 @@
                 });	
             }
 
-            /**
-            * Returns active skills prompts information for the specified agent
-            * 
-            * Five9 VCC Agent API Method:
-            *   GET /agents/{agentId}/prompts
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function getPrompts(){
 
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/prompts";
-                console.log(endpointURL);
 
-                return $.ajax({
-                    url: endpointURL,
-                    type: 'GET',
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Prompts")
-                        console.log(res);
-                    }
-                });	
-            }
-
-            /**
-            * play_prompt plays an audio prompt on the agent interaction
-            * 
-            * Five9 VCC Agent API Method:
-            *   PUT /agents/{agentId}/interactions/calls/{callId}/audio/player/play_prompt
-            * 
-            * Five9 Response Sample:
-            *   
-            */
-            function playPrompt(promptId, callId=undefined){
-                if(callId == undefined){
-                    let activeCalls = getCurrentCalls();
-                    let callId = activeCalls[0].id;
-                }
-
-                let promptInfo = JSON.stringify({
-                    "value": promptId
-                });
-
-                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+callId+"/audio/player/play_prompt";
-                console.log(endpointURL);
-
-                $.ajax({
-                    url: endpointURL,
-                    type: 'PUT',
-                    data: promptInfo,
-                    contentType: "application/json",
-                    success: function(res) {
-                        console.log("Conference Response")
-                        console.log(res);
-                    }
-                });	
-            }
-
-            function playPromptByName(promptName) {
-                $.when(getPrompts()).then(function(prompts){
-                    prompts.forEach(prompt => {
-                        if (prompt.name == promptName) {
-                          console.log(prompt)
-                          playPrompt(prompt.id, f9CurrentCallId);
-                        }
-                    });
-                })
-            }
-
-            
             function getSessionMetadata(){
                 return $.get(freedomMetadataURL, function( data ) {
                     five9SessionData = data;
@@ -255,24 +186,7 @@
                     f9CurrentCallId = eventData.payLoad.id
 
                     if(eventData.context.eventReason == "CONNECTED" && eventData.payLoad.state == "TALKING"){
-                        $.when(getDomainCallVariables()).then(function(cavs){
-                            // populate the cavsToUpdate variable with the ID of the target CAV
-                            // and the desired new value.
-                            //
-                            // For example, if there is a domain variable group called "debug"
-                            // and a variable in that group called "test", obtain the
-                            // ID of that CAV from the f9CAVs script variable that is set by the
-                            // getDomainCallVariables method:
-                            //     f9CAVs.debug.test.id
-                            //
-                            // If for example a truncated version of the Five9 agent username needs
-                            // to be stored in the debug.test variable:
-                            cavsToUpdate = {}
-                            cavsToUpdate[f9CAVs.debug.test.id] = "this is a test";
-                            $.when(updateCallVariableValues(cavsToUpdate)).then(function(response){
-                                // optionally do more after the variable has been updated
-                            });
-                        })
+
                     }
                 }),
                 "5": new f9socketEvent("EVENT_CALL_DELETED", function(eventData){
@@ -301,6 +215,30 @@
                     console.log(this.eventName, eventData.context.eventReason);
 
                     })
+            }
+
+            async function buttonHandler(dnis) {
+                $.when(makeExternalCall()).then(function(success){
+                    $.when(getDomainCallVariables()).then(function(cavs){
+                        // populate the cavsToUpdate variable with the ID of the target CAV
+                        // and the desired new value.
+                        //
+                        // For example, if there is a domain variable group called "debug"
+                        // and a variable in that group called "test", obtain the
+                        // ID of that CAV from the f9CAVs script variable that is set by the
+                        // getDomainCallVariables method:
+                        //     f9CAVs.debug.test.id
+                        //
+                        // If for example a truncated version of the Five9 agent username needs
+                        // to be stored in the debug.test variable:
+                        cavsToUpdate = {}
+                        cavsToUpdate[f9CAVs.Program.loan_number.id] = "123456789";
+                        $.when(updateCallVariableValues(cavsToUpdate)).then(function(response){
+                            // optionally do more after the variable has been updated
+                        });
+                    })
+                })
+                
             }
 
             $( document ).ready(function() {

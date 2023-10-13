@@ -6,15 +6,20 @@
     <meta name="description"
         content="Boilerplate and high-level howto guide with starter examples to use the Five9 VCC Agent and Supervisor REST API">
     <meta name="author" content="andrew.willey@five9.com">
+    <!-- Include Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
 
     <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
 
 </head>
 
-<body>
-    <h1>Click to Call Demo</h1>
-    <button class="call-external" targetCampaign="ob_outreach">9133259337</button>
-    <button class="call-external">9135554444</button>
+<body class="bg-gray-100 p-6">
+    <h1 class="text-2xl font-bold mb-4">Click to Call Demo</h1>
+    <div class="mb-4">
+        <button class="call-external bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" targetCampaign="ob_outreach">9138889999</button>
+        <button class="call-external bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">9135554444</button>
+    </div>
+    <div id="message-div" class="bg-white p-4 rounded shadow-md"></div>
 
     <script type="text/javascript">
         let freedomMetadataURL = "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
@@ -39,8 +44,8 @@
         function httpRequest(url, method, callback, data = null) {
             const options = {
                 method: method,
-                mode: 'cors',  // Enabling CORS mode
-                credentials: 'include'  // To include credentials
+                mode: 'cors',
+                credentials: 'include'
             };
 
             if (data) {
@@ -54,11 +59,20 @@
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
+                        document.getElementById('message-div').textContent = error;
+                    } else {
+                        document.getElementById('message-div').textContent = "Success: " + JSON.stringify(data, null, 2);
                     }
                     return response.json();
                 })
-                .then(data => callback(data))
-                .catch(error => console.error('Error:', error));
+                .then(data => {
+
+                    callback(data)
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('message-div').textContent = error;
+                });
         }
 
         // Five9 API Wrappers

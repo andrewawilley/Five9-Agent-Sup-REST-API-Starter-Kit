@@ -564,6 +564,29 @@ function initiateConferenceTransfer(dnis, warm=false, checkDNC=true, includeCall
 
 
             /**
+            * updateCallVariableValues returns the call attached variables for a given callID
+            * 
+            * Five9 VCC Agent API Method:
+            *   PUT /agents/{f9UserId}/interactions/calls/{f9CurrentCallId}/variables_2
+            */
+            function updateCallVariableValues(cavsToUpdate){
+                let endpointURL = base_agents_api_url+"/agents/"+f9UserId+"/interactions/calls/"+f9CurrentCallId+"/variables_2";
+                console.log(endpointURL);
+
+                return $.ajax({
+                    url: endpointURL,
+                    type: 'PUT',
+                    data: JSON.stringify(cavsToUpdate),
+                    contentType: "application/json",
+                    success: function(res) {
+                        console.log("CAVs Updated Response")
+                        console.log(res);
+                    }
+                });	
+            }
+
+            
+            /**
             * Updates contact info.  Accepts an array of fieldId and Values to update on the record.\
             * 
             *  ******* NOT FULLY IMPLEMENTED ***************
