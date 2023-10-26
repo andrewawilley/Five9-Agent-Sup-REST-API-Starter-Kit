@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Script with</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous" />
+</head>
+
+<body>
+    <main class="container">
+        <div class="row">
+            <div class="col-md-5 col-lg-2">
+                <p>
+                    <button type="button" class="btn btn-primary trigger-conference sticky-top" warm="true"
+                        destination="5995595610">
+                        Add the Language Line
+                    </button>
+                </p>
+                <p>
+                    <button type="button" class="btn btn-primary disconnect-conference-participants sticky-top">
+                        Disconnect Language Line from this call
+                    </button>
+                </p>
+            </div>
+            <div class="col-md-7 col-lg-10">
+                <h1>Language Line Instructions</h1>
+                <p>Wait until prompted, then <a href="#" class="dtmf-trigger" digits="12345">click here</a> to trigger the pass code of <span class="passcode"></span> </p>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+        integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+        let freedomMetadataURL =
+            "https://app.five9.com/appsvcs/rs/svc/auth/metadata";
+        let five9SessionData;
+
+        /**
+         * API Context Paths:
+         *      Agent REST API Services "agent_rest": "/appsvcs/rs/svc",
+         *      Agent call recordings and email message attachments "agent_str": "/strsvcs/rs/svc",
+         *      Supervisor REST API Services "sup_resut": "/supsvcs/rs/svc"
+         *      Websocket connection: "/appsvcs/ws/<socketkey>"
+         *           *Note:* The socketkey is optional, but only 3 sockets can exist for a user at any one time.
+         *                   Setting a random number here allows this code to be use in both an agent script AND in another browser tab
+         *                   The 4th websocket opened will cause the oldest open socket to close.
+         */
+        let randomSocketKey = Math.random() * 1000 + 1;
+
+        let contextPaths = {
+            agent_rest: "/appsvcs/rs/svc",
+            agent_str: "/strsvcs/rs/svc",
+            sup_rest: "/supsvcs/rs/svc",
+            websocket: "/appsvcs/ws/" + randomSocketKey,
+            supervisor_websocket: "/supsvcs/ws/" + randomSocketKey,
+        };
+
+        let base_api_url;
+        let base_agents_api_url;
+        let base_supervisor_api_url;
+        let base_websocket_api_url;
+        let base_supervisor_websocket_api_url;
+
+        let f9OrgId;
+        let f9UserId;
+
+        let f9CurrentCallId;
+        let f9CurrentCallCampaignId;
+
+        let DOMAIN_CONTACT_FIELDS_BY_FIELDNAME = {};
+        let DOMAIN_CAVs = {};
+
+        /**
+         * getCurrentCalls returns an array of calls [<object CallInfo>, ] with which the agent can work
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /agents/{agentId}/interactions/calls
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]
+         */
+        function getCurrentCalls() {
+            let calls;
+
+            let endpointURL =
+                base_agents_api_url + "/agents/" + f9UserId + "/interactions/calls";
+            console.log(endpointURL);
+
+            return $.get(endpointURL, function (res) {
+                console.log("Returned calls:");
+                console.log(res);
+                calls = res;
+                f9CurrentCallId = calls[0].id;
+                f9CurrentCallCampaignId = calls[0].campaignId;
+            });
+        }
+
+        /**
+         * getCampaignDispositions returns the dispositions for the current call campaign
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/call_variables
+         */
+        function getCampaignDispositions(campaignId) {
+            let endpointURL =
+                base_agents_api_url +
+                "/orgs/" +
+                f9OrgId +
+                "/campaigns/" +
+                campaignId +
+                "/dispositions";
+            console.log(endpointURL);
+            let dispositionList = undefined;
+            let dispositions = {};
+            return $.get(endpointURL, function (dispositionsResponse) {
+                console.log("Campaign Dispositions:");
+                console.log(dispositionsResponse);
+            });
+        }
+
+        /**
+         * dispose Finishes a call and sets a disposition.
+         *
+         * Requires dispositionId (ID of the disposition to select.  Ignored for Internal calls).
+         *
+         * Optional timeout parameter equal to or less than one year (366*24*60*60*1000) in ms.
+         * Use when the agent wants to change the default value.
+         *
+         * If the disposition flag is MUST_CONFIRM, show a confirmation window to the agent. If the
+         * agent confirms the disposition, set the disposition.
+         * If the call is associated with a preview session, the call is not necessarily finalized:
+         * • If the disposition is not final, the call might be set to the WRAP_UP state. In this
+         * case, the preview is set to RENEWING. The server remembers the options
+         * parameter in the request to apply the disposition later when the call is finalized.
+         * • If the disposition is final, the call and the preview are finalized immediately.
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/dispose
+         *
+         * Five9 Response Sample <object callInfo>:
+         *   [{id: "C86EBE50B9744D6D946531842B278846", campaignId: "1137597", callType: "AGENT", transfer: false, userTransferringId: null, ...}, ...]:
+         *
+         */
+        function disposeCurrentCall(
+            callId = null,
+            dispositionId,
+            timeout = null
+        ) {
+            if (callId === null) {
+                let activeCalls = getCurrentCalls();
+                callId = activeCalls[0].id;
+            }
+
+            let endpointURL =
+                base_agents_api_url +
+                "/agents/" +
+                f9UserId +
+                "/interactions/calls/" +
+                callId +
+                "/dispose";
+            console.log(endpointURL);
+            console.log(callId);
+            disposeOptionsInfo = {
+                dispositionId: dispositionId,
+            };
+
+            if (timeout != null) {
+                disposeOptionsInfo["timeout"];
+            }
+
+            $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: JSON.stringify(disposeOptionsInfo),
+                contentType: "application/json",
+                success: function (success_response) {
+                    console.log("Disposition Response:");
+                    console.log(success_response);
+                },
+            });
+        }
+
+        /**
+         * initiateConferenceTransferToExternal adds an external DNIS to the call as a conference participant.
+         * Set warm=true for a warm conference (1st party on hold).
+         *
+         * Five9 VCC Agent API Method:
+         *   POST /agents/{agentId}/interactions/calls/{callId}/add_external_to_conference
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function initiateConferenceTransferToExternal(
+            callId,
+            dnis,
+            warm = false,
+            checkDNC = true,
+            includeCallerInfo = true
+        ) {
+            let destinationInfo = JSON.stringify({
+                number: dnis,
+                warm: warm,
+                checkDNC: checkDNC,
+                includeCallerInfo: includeCallerInfo,
+            });
+
+            let endpointURL =
+                base_agents_api_url +
+                "/agents/" +
+                f9UserId +
+                "/interactions/calls/" +
+                callId +
+                "/add_external_to_conference";
+            console.log(endpointURL);
+
+            $.ajax({
+                url: endpointURL,
+                type: "POST",
+                data: destinationInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Conference Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        function leaveConference(callId, disposition) {
+            let leaveConferenceInfo = JSON.stringify({
+                dispositionId: disposition,
+                isToTransferCallOwnership: "false",
+            });
+
+            let endpointURL =
+                base_agents_api_url +
+                "/agents/" +
+                f9UserId +
+                "/interactions/calls/" +
+                callId +
+                "/leave_conference";
+            console.log(endpointURL);
+
+            $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                data: leaveConferenceInfo,
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Leave Conference Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * removeConferenceParticipant removes a conferenced participant from the conference.
+         *
+         * Five9 VCC Agent API Method:
+         *   PUT /agents/{agentId}/interactions/calls/{callId}/disconnectConferenceParticipant
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function removeConferenceParticipant(callId) {
+            let endpointURL =
+                base_agents_api_url +
+                "/agents/" +
+                f9UserId +
+                "/interactions/calls/" +
+                callId +
+                "/disconnectConferenceParticipant";
+            console.log(endpointURL);
+
+            return $.ajax({
+                url: endpointURL,
+                type: "PUT",
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("Remove Participant Response");
+                    console.log(res);
+                },
+            });
+        }
+
+        /**
+         * Returns speed dials
+         *
+         * Five9 VCC Agent API Method:
+         *   GET /orgs/{orgId}/speed_dials
+         *
+         * Five9 Response Sample:
+         *
+         */
+        function getDomainSpeedDials() {
+            let endpointURL =
+                base_agents_api_url + "/orgs/" + f9OrgId + "/speed_dials";
+            console.log(endpointURL);
+            let speedDials = undefined;
+            return $.ajax({
+                url: endpointURL,
+                type: "GET",
+                contentType: "application/json",
+                success: function (res) {
+                    console.log("SpeedDials");
+                    console.log(res);
+                    speedDials = res;
+                },
+            });
+            // return speedDials;
+        }
+
+        function getSessionMetadata() {
+            return $.get(freedomMetadataURL, function (data) {
+                five9SessionData = data;
+                f9OrgId = five9SessionData.orgId;
+                f9UserId = five9SessionData.userId;
+
+                base_api_url =
+                    "https://" +
+                    five9SessionData.metadata.dataCenters[0].apiUrls[0].host +
+                    ":" +
+                    five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
+                base_ws_url =
+                    "wss://" +
+                    five9SessionData.metadata.dataCenters[0].apiUrls[0].host +
+                    ":" +
+                    five9SessionData.metadata.dataCenters[0].apiUrls[0].port;
+
+                base_agents_api_url = base_api_url + contextPaths.agent_rest;
+                base_supervisor_api_url = base_api_url + contextPaths.sup_rest;
+                base_websocket_api_url = base_ws_url + contextPaths.websocket;
+                base_supervisor_websocket_api_url =
+                    base_ws_url + contextPaths.supervisor_websocket;
+
+                console.log("user ID: " + five9SessionData.userId);
+                console.log("Base Supervisor API URL: " + base_supervisor_api_url);
+                console.log("Base Agent API URL: " + base_agents_api_url);
+                // console.log(data);
+            }).fail(function (data) {
+                console.log(
+                    "You must be logged into Five9 in another browser tab for this to work"
+                );
+                $(".example-links").hide();
+            });
+        }
+
+        class f9socketEvent {
+            constructor(eventName, handler) {
+                this.eventName = eventName;
+                this.handle = handler;
+            }
+        }
+
+        let conferenceParticipantCallId;
+        // THIS is where you would build out event handlers for things that you care about
+        let f9socketEventHandlers = {
+            4: new f9socketEvent("EVENT_CALL_UPDATED", function (eventData) {
+                console.log(this.eventName, eventData.context.eventReason);
+                console.log(eventData);
+
+                if (
+                    eventData.context.eventReason === "CONFERENCE_PARTICIPANT_ADDED"
+                ) {
+                    $(".leave-conference").show();
+                    $(".disconnect-conference-participants").show();
+                    if (eventData.payLoad.addressType === "EXTERNAL") {
+                        conferenceParticipantCallId = eventData.payLoad.id;
+                    }
+                }
+            }),
+
+            5: new f9socketEvent("EVENT_CALL_DELETED", function (eventData) {
+                console.log(this.eventName, eventData.context.eventReason);
+                console.log(eventData);
+            }),
+        };
+
+        $(document).ready(function () {
+            // set crossDomain to allow page to run in separate tab and not on a campaign script
+            $.ajaxSetup({
+                crossDomain: true,
+                xhrFields: {
+                    withCredentials: true,
+                },
+            });
+
+            // first obtain session metadata, and once that is complete, open a socket
+            $.when(getSessionMetadata()).then(function (sessionMetaData) {
+                console.info("Session Metadata:", sessionMetaData);
+                $(".leave-conference").hide();
+                $(".disconnect-conference-participants").hide();
+                const socket = new window.WebSocket(base_websocket_api_url);
+                let pingIntervalHandle = null;
+
+                socket.onopen = function () {
+                    // Socket has to be kept alive with one ping every 15 seconds
+                    pingIntervalHandle = window.setInterval(function () {
+                        socket.send("ping");
+                    }, 15000);
+                    console.info("Websocket Opened");
+                };
+
+                // attach a callback function to the "message" events on the socket
+                socket.addEventListener("message", function (event) {
+                    eventData = JSON.parse(event.data);
+                    eventHandler = f9socketEventHandlers[eventData.context.eventId];
+                    if (eventHandler) {
+                        eventHandler.handle(eventData);
+                    } else {
+                        f9socketEventHandlers[eventData.context.eventId] =
+                            new f9socketEvent("Unhandled Socket Event", function (
+                                eventData
+                            ) {
+                                //console.log(this.eventName, eventData.context.eventReason)
+                            });
+                    }
+                    //console.log(eventData);
+                });
+
+                socket.onclose = function () {
+                    window.clearInterval(pingIntervalHandle);
+                };
+
+                window.addEventListener("unload", function () {
+                    socket.close();
+                });
+                console.info("Session Metadata:", sessionMetaData);
+
+                let dispositions;
+                $(".trigger-conference").click(function () {
+                    let destination = $(this).attr("destination");
+                    let warm = $(this).attr("warm");
+                    $.when(getCurrentCalls()).then(function (calls) {
+                        console.log("destination: " + destination);
+                        initiateConferenceTransferToExternal(
+                            calls[0].id,
+                            destination,
+                            warm
+                        );
+                        console.log(conferenceParticipant);
+                    });
+                });
+
+                $(".leave-conference").click(function () {
+                    let targetDisposition = $(this).attr("disposition");
+                    let dispositionId;
+                    $.when(getCurrentCalls()).then(function (calls) {
+                        $.when(getCampaignDispositions(calls[0].campaignId)).then(
+                            function (dispositionInfo) {
+                                dispositionInfo.dispositions.forEach((dispo) => {
+                                    if (dispo.name === targetDisposition) {
+                                        dispositionId = dispo.id;
+                                    }
+                                });
+                                console.log(
+                                    "Leaving Conference with Disposition: " + dispositionId
+                                );
+                                leaveConference(calls[0].id, dispositionId);
+                            }
+                        );
+                    });
+                });
+
+                $(".disconnect-conference-participants").click(function () {
+                    $.when(getCurrentCalls()).then(function (calls) {
+                        for (i = 1; i < calls.length; i++) {
+                            removeConferenceParticipant(calls[i].id);
+                        }
+                        $(".leave-conference").hide();
+                        $(".disconnect-conference-participants").hide();
+                    });
+                });
+
+                $(".dtmf-trigger").click(async function() {
+                    let digits = $(this).attr("digits");
+                    console.log(`Digits: ${digits}`)
+                    let targetElement = '';
+                    for (let digit of digits.split("")) {
+                        targetElement = `#DialPad-${digit}-button`;
+                        let parentTarget = window.parent.$(targetElement);
+                        window.parent.$(targetElement).click();
+                        await new Promise(resolve => setTimeout(resolve, 500));  // This line adds the 0.5s delay
+                    }
+                });
+                
+            });
+        });
+    </script>
+</body>
+
+</html>
