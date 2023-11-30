@@ -3,17 +3,17 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="description" content="Five9 VCC Agent and Supervisor REST API Bootstrap" />
-  <meta name="author" content="andrew.willey@five9.com" />
+  <meta name="description" content="Campaign script bootstrap that force-sets agent options" />
+
   <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
 </head>
 
 <body>
   <main>
-    <h1>Note</h1>
-    <p>
-      Agent scripting can go here.
-    </p>
+    <div id="greeting" hidden>
+      <h2>Thank you for calling Coach my name is @Agent.full_name@, I apologize for the wait, with whom do I have the
+        pleasure of speaking with today?</h2>
+    </div>
   </main>
 
   <script type="text/javascript">
@@ -278,7 +278,18 @@
 
     onDocumentReady(async function () {
 
-      clickParentInteractionTab();
+      const hms = "@Call.queue_time@"
+
+      const [hours, minutes, seconds] = hms.split(':').map(Number);
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+      console.log(totalSeconds);
+      
+      if (totalSeconds > 120) {
+        const greeting = document.getElementById("greeting");
+        greeting.hidden = false;
+      } else {
+        // clickParentInteractionTab();
+      }
 
       const session = new Five9Session();
       const metadataObtained = await session.getSessionMetadata();

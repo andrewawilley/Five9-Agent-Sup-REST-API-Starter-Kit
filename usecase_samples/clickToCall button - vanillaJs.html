@@ -8,16 +8,15 @@
     <meta name="author" content="andrew.willey@five9.com">
     <!-- Include Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.7/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <title>Five9 VCC Agent and Supervisor REST API Wrappers</title>
-
 </head>
 
 <body class="bg-gray-100 p-6">
     <h1 class="text-2xl font-bold mb-4">Click to Call Demo</h1>
     <div class="mb-4">
-        <button class="call-external bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" targetCampaign="ob_outreach">9138889999</button>
-        <button class="call-external bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">9135554444</button>
+        <button class="call-external bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" targetCampaign="ob_outreach">9133259337</button>
     </div>
     <div id="message-div" class="bg-white p-4 rounded shadow-md"></div>
 
@@ -38,7 +37,7 @@
         let f9OrgId;
         let f9UserId;
 
-        let DEFAULT_CAMPAIGN_NAME = "ob_outreach";
+        let DEFAULT_CAMPAIGN_NAME = undefined;
 
         // HTTP Request Wrapper
         function httpRequest(url, method, callback, data = null) {
@@ -71,7 +70,7 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('message-div').textContent = error;
+                    //document.getElementById('message-div').textContent = error;
                 });
         }
 
@@ -142,9 +141,32 @@
                 base_agents_api_url = `${base_api_url}${contextPaths.agent_rest}`;
                 base_supervisor_api_url = `${base_api_url}${contextPaths.sup_rest}`;
         
-                callExternalNumber(dnis, campaignName, campaignId);
+                if (!campaignName) {
+                    getAgentCampaigns(function(agentCampaigns) {
+                        const campaignNames = Object.keys(agentCampaigns);
+                        if (campaignNames.length > 0) {
+                            Swal.fire({
+                                title: 'Select a Campaign',
+                                input: 'select',
+                                inputOptions: campaignNames.reduce((obj, name) => {
+                                    obj[name] = name;
+                                    return obj;
+                                }, {}),
+                                inputPlaceholder: 'Select a campaign',
+                                showCancelButton: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    callExternalNumber(dnis, result.value);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    callExternalNumber(dnis, campaignName, campaignId);
+                }
             });
         }
+        
         
         // Add event listeners to all buttons with class "call-external"
         document.addEventListener("DOMContentLoaded", function () {

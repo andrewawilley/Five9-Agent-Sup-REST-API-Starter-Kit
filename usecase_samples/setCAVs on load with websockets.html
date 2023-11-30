@@ -213,7 +213,7 @@
                         "CREATED",
                         async function (eventData) {
                             this.session.currentCall = eventData.payLoad;
-                            
+
                             let domainCAVs = await this.session.getDomainCavs();
                             let cavsToUpdate = {}
                             cavsToUpdate[this.session.CAVs.debug.test.id] = "true"
@@ -242,7 +242,17 @@
                             // });s
                         },
                         this
-                    )
+                    ),
+                    8: new f9socketEvent(
+                        "PREVIEW_STARTED",
+                        function (eventData) {
+                            this.session.currentCall = eventData.payLoad;
+                            // get dispositions for current campaign
+
+
+
+                        },
+                        this)
                 };
                 // merge the common socket event handlers with the agent specific ones
                 f9SocketEventHandlersAgent = Object.assign(
@@ -412,7 +422,7 @@
                 }
 
                 // using forEach, loop through the cavsResponse 
-                cavsResponse.forEach((cav) => {                    
+                cavsResponse.forEach((cav) => {
                     if (this.CAVs[cav.group] == null) {
                         this.CAVs[cav.group] = {};
                     }
@@ -421,10 +431,10 @@
                     delete ccopy.group
                     delete ccopy.name
                     this.CAVs[cav.group][cav.name] = ccopy
-                    
+
 
                 })
-                
+
                 console.log("DOMAIN CAVs UPDATED TO")
                 console.log(this.CAVs)
             }
@@ -449,7 +459,8 @@
             if (metadataObtained === true) {
                 // start an agent websocket
                 let agentWebSocket = session.connectAgentWebsocket();
-                
+                let domainCAVs = await session.getDomainCavs();
+
                 let currentCalls = await session.getCurrentCalls();
                 if (session.currentCall) {
                     console.log("current call is: ", session.currentCall);

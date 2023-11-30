@@ -21,17 +21,18 @@
     <script type="text/javascript">
 
         promptPlayed = {};
-        
+
         // Change to a specific prompt that exists on your domain.
-        const promptPlayOnConnect = "QRL";
+        const promptPlayOnConnect = "Legal_Recording_EN";
         let promptPlayOnConnectId = null;
 
         // uncomment the call types you want to play the prompt on
         const promptPlayOnCallTypes = [
-            "Manual",
-            "Inbound",
-            "Outbound",
-            "Preview",
+            "QUEUE_CALLBACK",
+            // "MANUAL",
+            // "INBOUND",
+            // "OUTBOUND",
+            // "PREVIEW"
         ];
 
         class f9socketEvent {
@@ -212,18 +213,19 @@
                         function (eventData) {
                             console.log(this.eventName, eventData.context.eventReason);
                             console.log(eventData);
-                            
+
                             // if there is no promptPlayed object for this call, create one
-                            if(!promptPlayed[eventData.payLoad.id]){
+                            if (!promptPlayed[eventData.payLoad.id]) {
                                 promptPlayed[eventData.payLoad.id] = {};
                             }
 
-                            if(eventData.payLoad.state == "TALKING" && eventData.context.eventReason == "CONNECTED" && !promptPlayed[eventData.payLoad.id][promptPlayOnConnectId]){
-                                let playPromptResponse = this.session.playPrompt(eventData.payLoad.id,promptPlayOnConnectId);
+                            // if the prompt has not been played yet, the callType is in the promptPlayOnCallTypes array, and the call is in the "TALKING" state, play the prompt
+                            if (promptPlayOnCallTypes.includes(eventData.payLoad.callType) && eventData.payLoad.state == "TALKING" && eventData.context.eventReason == "CONNECTED" && !promptPlayed[eventData.payLoad.id][promptPlayOnConnectId]) {
+                                let playPromptResponse = this.session.playPrompt(eventData.payLoad.id, promptPlayOnConnectId);
                                 // if the prompt was played successfully, set the promptPlayed flag to true
-                                if(playPromptResponse.status == "OK"){
+                                if (playPromptResponse.status == "OK") {
                                     promptPlayed[eventData.payLoad.id][promptPlayOnConnectId] = true;
-                                }                                
+                                }
                             }
                         },
                         this
@@ -295,7 +297,7 @@
                     }
                     console.log("HERE*************")
                     console.log(response)
-                    
+
                     // Parse the response JSON
                     try {
                         const data = await response.json();
@@ -421,21 +423,21 @@
                 // start an agent websocket
                 let agentWebSocket = session.connectAgentWebsocket();
                 let currentCalls = await session.getCurrentCalls();
-                let availablePrompts = await session.getAvailablePrompts(); 
+                let availablePrompts = await session.getAvailablePrompts();
                 // get the ID of the target promptPlayOnConnect prompt
-                promptPlayOnConnectId = availablePrompts.find(prompt => prompt.name === promptPlayOnConnect).id;               
+                promptPlayOnConnectId = availablePrompts.find(prompt => prompt.name === promptPlayOnConnect).id;
                 console.log(`Prompt to play on connect: ${promptPlayOnConnect} (${promptPlayOnConnectId})`);
-                
+
                 // if there is no promptPlayed object for this call, create one
-                if(!promptPlayed[currentCalls[0].id]){
+                if (!promptPlayed[currentCalls[0].id]) {
                     promptPlayed[currentCalls[0].id] = {};
                 }
-                
+
                 // if the prompt has not been played yet, play it on the first call that is not in the "TALKING" state
-                if(!promptPlayed[currentCalls[0].id][promptPlayOnConnectId] && currentCalls[0].state == "TALKING"){
-                    playPromptResponse = await session.playPrompt(currentCalls[0].id,promptPlayOnConnectId);
+                if (!promptPlayed[currentCalls[0].id][promptPlayOnConnectId] && currentCalls[0].state == "TALKING" && playPromptOnCallTypes.includes(currentCalls[0].callType)) {
+                    playPromptResponse = await session.playPrompt(currentCalls[0].id, promptPlayOnConnectId);
                     // if the prompt was played successfully, set the promptPlayed flag to true
-                    if(playPromptResponse.status == "OK"){
+                    if (playPromptResponse.status == "OK") {
                         promptPlayed[currentCalls[0].id][promptPlayOnConnectId] = true;
                     }
                 }
