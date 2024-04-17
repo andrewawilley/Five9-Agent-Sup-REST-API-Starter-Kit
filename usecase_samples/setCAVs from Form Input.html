@@ -14,13 +14,17 @@
 <body class="bg-gray-100">
     <main class="min-h-screen flex items-center justify-center">
         <div class="bg-white shadow-xl rounded-lg p-8">
-            <p class="text-l font-bold mb-1">See source for sample structure of an input form. Note the Javascript handler that invokes the CAV update methods on the API</p>
-            <p class="text-gray-700 text-sm font-bold mb-5">Update the "id" property of the select element and the "data-select-id" of the button to a CAV group.variableName on your domain.</p>
+            <p class="text-l font-bold mb-1">See source for sample structure of an input form. Note the Javascript
+                handler that invokes the CAV update methods on the API</p>
+            <p class="text-gray-700 text-sm font-bold mb-5">Update the "id" property of the select element and the
+                "data-select-id" of the button to a CAV group.variableName on your domain.</p>
             <div class="space-y-4">
                 <div>
-                    
-                    <label for="Program.Program Name" class="block text-gray-700 text-sm font-bold mb-2">Program of Interest:</label>
-                    <select id="Program.Program Name" class="block w-full p-2 border border-gray-300 rounded shadow">
+
+                    <label for="Program.Program Name" class="block text-gray-700 text-sm font-bold mb-2">Program of
+                        Interest:</label>
+                    <select id="Program.Program Name"
+                        class="cav-form block w-full p-2 border border-gray-300 rounded shadow">
                         <option value="Computer Science">Computer Science</option>
                         <option value="Criminal Justice">Criminal Justice</option>
                         <option value="Etruscan Tomb Carving">Etruscan Tomb Carving</option>
@@ -29,6 +33,25 @@
                 </div>
                 <button data-select-id="Program.Program Name"
                     class="saveButton bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition-colors duration-150">Save</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+
+                    <label for="Program.loan_number" class="block text-gray-700 text-sm font-bold mb-2">Program of
+                        Interest:</label>
+                    <input id="Program.loan_number"
+                        class="cav-form block w-full p-2 border border-gray-300 rounded shadow">
+                    </input>
+                </div>
+                <button data-select-id="Program.loan_number"
+                    class="saveButton bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition-colors duration-150">Save</button>
+            </div>
+            <hr class="my-4 border-gray-300">
+
+            <div class="space-y-4">
+                <button
+                    class="saveAllButton bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition-colors duration-150 mt-4">Save
+                    All</button>
             </div>
         </div>
     </main>
@@ -485,6 +508,11 @@
                     });
                 });
 
+                // Handle the Save All button click
+                document.querySelector('.saveAllButton').addEventListener('click', function () {
+                    bulkSaveCAVs(session);
+                });
+
                 async function saveCAV(button) {
                     button.textContent = "Processing";
                     button.disabled = true;
@@ -516,6 +544,34 @@
                         button.textContent = "Error Saving";
                         button.disabled = true;
                         button.className = "bg-red-100 text-red-700 font-bold py-2 px-4 rounded cursor-not-allowed";
+                    }
+                }
+                async function bulkSaveCAVs(session) {
+                    // This function collects all CAV changes and performs a single bulk update
+                    let cavsToUpdate = {};
+                    console.log("BULK SAVE")
+                    await session.getDomainCavs();
+                    await session.getCurrentCalls();
+                    document.querySelectorAll('.cav-form').forEach(select => {
+                        const cavGroup = select.id.split('.')[0];
+                        const cavName = select.id.split('.')[1];
+                        const cavId = session.CAVs[cavGroup][cavName].id;
+                        cavsToUpdate[cavId] = select.value;
+                    });
+
+                    console.log("Bulk updating CAVs:", cavsToUpdate);
+                    try {
+                        const updateResponse = await session.updateCavs(cavsToUpdate);
+                        console.log(`Bulk CAV Update Response:`, updateResponse);
+                        // locate all save buttons and change them to green with "update" text
+                        document.querySelectorAll('.saveButton').forEach(button => {
+                            button.textContent = "Update";
+                            button.disabled = false;
+                            button.className = "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline";
+                        });
+                        
+                    } catch (error) {
+                        console.error('Bulk update failed:', error);
                     }
                 }
 
