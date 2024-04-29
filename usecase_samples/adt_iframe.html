@@ -39,6 +39,7 @@
             <li class="mb-1">Log into Five9 Agent Desktop Toolkit here using the SSO Login button</li>
         </ul>
     </div>
+    <script type="text/javascript" src="https://app.five9.com/dev/sdk/crm/latest/five9.crm.sdk.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function () {
 
@@ -55,10 +56,8 @@
                     ssoLoginUrl = encodeURIComponent(ssoLoginUrl);
                     troubleshootingList.classList.remove('hidden');
                 }
-                
-                
 
-                iframe.src = `${adapterUrl}?idpLoginUrl=${ssoLoginUrl}`;
+                iframe.src = `${adapterUrl}?f9crmapi=true&idpLoginUrl=${ssoLoginUrl}`;
                 messageDiv.innerHTML = `<h2>Full adapter URL</h2><p>${iframe.src}</p>`;
                 messageDiv.classList.remove('hidden');
             });

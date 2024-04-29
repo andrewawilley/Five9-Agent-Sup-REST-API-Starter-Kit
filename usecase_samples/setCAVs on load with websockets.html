@@ -20,20 +20,6 @@
 
     <script type="text/javascript">
 
-        promptPlayed = {};
-
-        // Change to a specific prompt that exists on your domain.
-        const promptPlayOnConnect = "QRL";
-        let promptPlayOnConnectId = null;
-
-        // uncomment the call types you want to play the prompt on
-        const promptPlayOnCallTypes = [
-            "Manual",
-            "Inbound",
-            "Outbound",
-            "Preview",
-        ];
-
         class f9socketEvent {
             constructor(eventName, handler, session) {
                 this.eventName = eventName;
