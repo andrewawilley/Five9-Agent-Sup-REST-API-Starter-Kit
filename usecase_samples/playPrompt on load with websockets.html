@@ -14,7 +14,7 @@
         <h1>Note</h1>
         <p>
             See browser inspector for details. Must be signed in as an agent for
-            this to work.
+            this to work. You can remove this content and replace it with your own.
         </p>
     </main>
 
@@ -26,13 +26,13 @@
         const promptPlayOnConnect = "Legal_Recording_EN";
         let promptPlayOnConnectId = null;
 
-        // uncomment the call types you want to play the prompt on
+        // comment the call types you don't want to play the prompt on
         const promptPlayOnCallTypes = [
             "QUEUE_CALLBACK",
-            // "MANUAL",
-            // "INBOUND",
-            // "OUTBOUND",
-            // "PREVIEW"
+            "MANUAL",
+            "INBOUND",
+            "OUTBOUND",
+            "PREVIEW"
         ];
 
         class f9socketEvent {
@@ -409,6 +409,26 @@
 
         }
 
+
+        function clickParentInteractionTab() {
+            console.log("clickParentInteractionTab")
+            // Find all elements with class "tab-dropdown-label" containing the text "Interaction"
+            var elements = window.parent.document.querySelectorAll(".tab-dropdown-label");
+
+            // Loop through the found elements
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+
+                // Check if the text content of the element contains "Interaction"
+                if (element.textContent.includes("Interaction")) {
+
+                    // Trigger a click event on the element
+                    element.click();
+                    break; // Exit the loop after the first click
+                }
+            }
+        }
+
         function onDocumentReady(fn) {
             if (document.readyState !== "loading") {
                 fn();
@@ -417,6 +437,7 @@
             }
         }
         onDocumentReady(async function () {
+            clickParentInteractionTab();
             const session = new Five9Session();
             const metadataObtained = await session.getSessionMetadata();
             if (metadataObtained === true) {
