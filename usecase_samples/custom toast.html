@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Step1 Script with Transfer Button</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+</head>
+
+<body>
+    <main> </main>>
+
+    <script type="text/javascript">
+        function showNotification() {
+
+            const notificationText = "Hi there";
+
+            // Check if the browser supports notifications
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notification");
+            }
+
+            // Check if notification permissions have already been granted
+            else if (Notification.permission === "granted") {
+
+                new Notification(notificationText);
+            }
+            
+            // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    // If the user accepts, let's create a notification
+                    if (permission === "granted") {
+                        new Notification(notificationText);
+                    }
+                });
+            }
+        }
+
+        // onload show the notification
+        window.onload = function () {
+            showNotification();
+        }
+
+    </script>
+</body>
+
+</html>
